@@ -13,16 +13,28 @@ class DB
       @root = "http://#{ host }:#{ port }/#{ dbname }/"
     else if _.isString host
       @root = host
+      if _.last(@root) isnt '/'
+        @root = "#{ @root }/"
     else
-      throw "DB.constructor: attempt to create a DB without name and host"
+      throw 'DB.constructor: attempt to create a DB without name and host'
 
     @validationDocUrl = "#{ @root }_design/validation"
+
+  exists: (doc, cb) ->
+    if _.isObject(doc) and docIdOk(doc._id)
+      httpGet "#{ @root }#{ doc._id }", cb
+    else if docIdOk(doc)
+      httpGet "#{ @root }#{ doc }", cb
+    else if _.isFunction doc
+      httpGet @root, doc
+    else
+      throw 'DB.exists: no document id and/or callback specified'
 
   retrieveAll: (cb) ->
     httpGet "#{ @root }_all_docs?include_docs=true", cb
 
   retrieve: (doc, cb) ->
-    if doc? and _.isObject(doc) and docIdOk(doc._id)
+    if _.isObject(doc) and docIdOk(doc._id)
       httpGet "#{ @root }#{ doc._id }", cb
     else if docIdOk(doc)
       httpGet "#{ @root }#{ doc }", cb
@@ -57,7 +69,7 @@ class DB
     if _.isObject(doc) and docIdOk(doc._id)
       httpPut "#{ @root }#{ doc._id }", cb
     else
-      throw
+      throw 'DB.modify: no document id and/or callback specified'
 
 jsonHeader = 'Content-Type': 'application/json'
 
@@ -75,7 +87,7 @@ httpProto = (url, options, startCb, endCb) ->
         endCb(
           try
             JSON.parse result
-          catch
+          catch _
             result)
 
   req = http.request(options, callback)
@@ -95,7 +107,8 @@ httpBodyJson = (url, method, body, endCb) ->
 
   httpProto url, options, startCb, endCb
 
-httpGet = (url, cb) -> httpProto url, method: 'GET', null, cb
+httpGet = (url, cb) ->
+  httpProto url, method: 'GET', null, cb
 httpPut = (url, body, endCb) -> httpBodyJson url, 'PUT', body, endCb
 httpPost = (url, body, endCb) -> httpBodyJson url, 'POST', body, endCb
 httpDelete = (url, body, endCb) -> httpBodyJson url, 'DELETE', body, endCb
