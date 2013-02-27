@@ -1,0 +1,35 @@
+{
+    "name": "benchdb",
+    "preferGlobal": false,
+    "version": "0.0.1",
+    "author": "Max Desyatov <max.desyatov@gmail.com>",
+    "description": "CouchDB API wrapper with support for document validation",
+    "contributors": [
+        {
+            "name": "Max Desyatov",
+            "email": "max.desyatov@gmail.com"
+        }
+    ],
+    "main": "./common",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/explicitcall/benchdb.git"
+    },
+    "keywords": [
+        "couchdb",
+        "validation"
+    ],
+    "dependencies" : {
+        "coffee-script":  "1.5.x",
+        "underscore": "1.4.x",
+        "walkdir": "0.0.x"
+    },
+    "analyze": false,
+    "license": "MIT",
+    "engines": {
+        "node": ">=0.8"
+    },
+    "devDependencies": {
+        "nodeunit"    :  "0.7.x"
+    }
+}
