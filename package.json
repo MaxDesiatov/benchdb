@@ -1,7 +1,7 @@
 {
     "name": "benchdb",
     "preferGlobal": false,
-    "version": "0.0.2",
+    "version": "0.0.3",
     "author": "Max Desyatov <max.desyatov@gmail.com>",
     "description": "CouchDB API wrapper with support for document validation",
     "contributors": [
@@ -22,7 +22,8 @@
     "dependencies" : {
         "coffee-script":  "1.5.x",
         "underscore": "1.4.x",
-        "walkdir": "0.0.x"
+        "walkdir": "0.0.x",
+        "async": "0.2.x"
     },
     "analyze": false,
     "license": "MIT",
@@ -30,7 +31,6 @@
         "node": ">=0.8"
     },
     "devDependencies": {
-        "nodeunit":  "0.7.x",
-        "async": "0.2.x"
+        "nodeunit":  "0.7.x"
     }
 }

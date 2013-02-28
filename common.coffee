@@ -4,6 +4,7 @@ path = require 'path'
 fs = require 'fs'
 walk = require 'walkdir'
 _ = require 'underscore'
+a = require 'async'
 
 class DB
   docIdOk = (docId) -> _.isString(docId) or _.isNumber(docId)
@@ -35,6 +36,26 @@ class DB
       @exists (error, res) -> doc(error, res.error isnt 'not_found')
     else
       @exists doc, (error, res) -> cb(error, res.error isnt 'not_found')
+
+  checkExists: (endCb) ->
+    a.waterfall [
+      ((cb) =>
+        @existsBool cb),
+      ((res, cb) =>
+        if res
+          cb 'ok'
+        else
+          @createItself cb),
+      ((res, cb) ->
+        if res.ok
+          cb 'ok'
+        else
+          cb res)],
+    (error) ->
+      if error is 'ok'
+        endCb null
+      else
+        endCb error
 
   retrieveAll: (cb) ->
     httpGet "#{ @root }_all_docs?include_docs=true", cb

@@ -32,7 +32,10 @@ steps = (test, testDb) ->
       test.ok res.ok, 'document modification test failed'
       testDb.removeItself cb),
     ((res, cb) ->
-      test.ok res.ok, 'newly created db removed test failed'
+      test.ok res.ok, 'db removal test #1 failed'
+      testDb.existsBool cb),
+    ((res, cb) ->
+      test.ok not res, 'db removal test #2 failed'
       cb())], -> test.done()
 
 chars = 'abcdefghijklmnopqrstuvwxyz'
@@ -59,3 +62,23 @@ module.exports =
       testDb = new db '127.0.0.1', 5984, dbName
       test.equals testDb.root, "http://127.0.0.1:5984/#{ dbName }/"
       steps test, testDb
+
+  testCheckExists: (test) ->
+    generateDbName '127.0.0.1', 5984, (dbName) ->
+      testDb = new db '127.0.0.1', 5984, dbName
+      a.waterfall [
+        _(testDb.existsBool).bind(testDb),
+        ((res, cb) ->
+          test.ok not res, 'generateDbName test failed'
+          testDb.checkExists cb),
+        _(testDb.existsBool).bind(testDb),
+        ((res, cb) ->
+          test.ok res, 'checkExists test failed'
+          testDb.removeItself cb),
+        ((res, cb) ->
+          test.ok res.ok, 'checkExists cleanup test #1 failed'
+          testDb.existsBool cb),
+        ((res, cb) ->
+          test.ok not res, 'checkExists cleanup test #2 failed'
+          cb())], -> test.done()
+
