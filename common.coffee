@@ -30,6 +30,12 @@ class DB
     else
       throw 'DB.exists: no document id and/or callback specified'
 
+  existsBool: (doc, cb) ->
+    if _.isFunction(doc)
+      @exists (res) -> doc res.error is 'not_found'
+    else
+      @exists doc, (res) -> cb res.error is 'not_found'
+
   retrieveAll: (cb) ->
     httpGet "#{ @root }_all_docs?include_docs=true", cb
 
