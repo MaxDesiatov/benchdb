@@ -32,9 +32,9 @@ class DB
 
   existsBool: (doc, cb) ->
     if _.isFunction(doc)
-      @exists (res) -> doc res.error is 'not_found'
+      @exists (error, res) -> doc(error, res.error isnt 'not_found')
     else
-      @exists doc, (res) -> cb res.error is 'not_found'
+      @exists doc, (error, res) -> cb(error, res.error isnt 'not_found')
 
   retrieveAll: (cb) ->
     httpGet "#{ @root }_all_docs?include_docs=true", cb

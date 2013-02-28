@@ -10,9 +10,15 @@ steps = (test, testDb) ->
     ((res, cb) ->
       test.equals res.error, 'not_found', 'db exists test #1 failed'
       test.equals res.reason, 'no_db_file', 'db exists test #2 failed'
+      testDb.existsBool cb),
+    ((res, cb) ->
+      test.ok not res, 'db exists test #3 failed'
       testDb.createItself cb),
     ((res, cb) ->
-      test.ok res.ok, 'db created test failed'
+      test.ok res.ok, 'db created test #1 failed'
+      testDb.existsBool cb)
+    ((res, cb) ->
+      test.ok res, 'db created test #2 failed'
       testDb.retrieveAll cb),
     ((res, cb) ->
       test.equals res.total_rows, 0, 'newly created db row count test failed'
