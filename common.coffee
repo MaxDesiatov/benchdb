@@ -46,11 +46,11 @@ class DB
 
   create: (doc, cb) ->
     if _.isObject(doc) and docIdOk(doc._id)
-      httpPut "#{ @root }/#{ doc._id }", doc, cb
+      httpPut "#{ @root }#{ doc._id }", doc, cb
     else if docIdOk(doc)
-      httpPost "#{ @root }#{ doc }", cb
+      httpPut "#{ @root }#{ doc }", cb
     else if _.isFunction cb
-      httpPut @root, cb
+      httpPost @root, cb
     else
       throw 'DB.create: no document id and/or callback specified'
 
@@ -67,7 +67,7 @@ class DB
 
   modify: (doc, cb) ->
     if _.isObject(doc) and docIdOk(doc._id)
-      httpPut "#{ @root }#{ doc._id }", cb
+      httpPut "#{ @root }#{ doc._id }", doc, cb
     else
       throw 'DB.modify: no document id and/or callback specified'
 
@@ -84,11 +84,12 @@ httpProto = (url, options, startCb, endCb) ->
 
     if _.isFunction endCb
       response.on 'end', ->
-        endCb(
+        res = (
           try
             JSON.parse result
           catch _
             result)
+        endCb null, res
 
   req = http.request(options, callback)
   if _.isFunction(startCb)
@@ -154,4 +155,4 @@ stringifyPackage = (packageName) ->
 
   result
 
-exports.DB = DB
+module.exports = DB
