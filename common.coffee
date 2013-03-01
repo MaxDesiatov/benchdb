@@ -98,6 +98,30 @@ class DB
     else
       throw 'DB.modify: no document id and/or callback specified'
 
+  attachFile: (doc, filepath, cb) ->
+    url = "#{ @root }#{ doc._id }/attachment?rev=#{ doc._rev }"
+    mime file.path, (error, filetype) ->
+      if error?
+        cb error, {}
+      else
+        httpProto url, method: 'PUT', ((req) ->
+          boundaryKey = Math.random().toString(16) # random string
+          # the header for the one and only part (need to use CRLF here)
+          req.setHeader('Content-Type', 'multipart/form-data; boundary="'+boundaryKey+'"')
+          request.write(
+            '--' + boundaryKey + '\r\n'
+            # use your file's mime type here, if known
+            + "Content-Type: #{ filetype }\r\n"
+            # "name" is the name of the form field
+            # "filename" is the name of the original file
+            + 'Content-Disposition: form-data; name="my_file"; filename="my_file.bin"\r\n'
+            + 'Content-Transfer-Encoding: binary\r\n\r\n')
+
+          # maybe write directly to the socket here?
+          fs.createReadStream(filepath, { bufferSize: 4 * 1024 }).pipe(req, { end: false }).on 'end', ->
+            # mark the end of the one and only part
+            req.end('\r\n--' + boundaryKey + '--')), cb
+
 jsonHeader = 'Content-Type': 'application/json'
 
 httpProto = (url, options, startCb, endCb) ->
