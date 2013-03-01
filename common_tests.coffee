@@ -2,7 +2,7 @@ db = require './common'
 a = require 'async'
 _ = require 'underscore'
 
-testdoc = { _id: 'testdoc' }
+testdoc = { _id: 'testdoc', testprop: 41 }
 
 steps = (test, testDb) ->
   a.waterfall [
@@ -27,9 +27,17 @@ steps = (test, testDb) ->
       test.ok res.ok, 'document creation test failed'
       test.equals res.id, testdoc._id, "document creation id comparison
         test failed"
-      testDb.modify _(testdoc).extend(testprop: 42, _rev: res.rev), cb)
+      testDb.retrieve testdoc, cb),
+    ((res, cb) ->
+      test.equals res.testprop, testdoc.testprop, "document creation property comparison
+              test failed"
+      testDb.modify _(testdoc).extend(testprop: 42, _rev: res._rev), cb)
     ((res, cb) ->
       test.ok res.ok, 'document modification test failed'
+      testDb.retrieve testdoc, cb),
+    ((res, cb) ->
+      test.equals res.testprop, 42, "document modification property comparison
+                    test failed"
       testDb.removeItself cb),
     ((res, cb) ->
       test.ok res.ok, 'db removal test #1 failed'

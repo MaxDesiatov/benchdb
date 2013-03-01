@@ -77,7 +77,7 @@ class DB
     else if docIdOk(doc)
       httpPut "#{ @root }#{ doc }", cb
     else if _.isFunction cb
-      httpPost @root, cb
+      httpPost @root, doc, cb
     else
       throw 'DB.create: no document id and/or callback specified'
 
