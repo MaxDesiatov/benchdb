@@ -32,6 +32,8 @@
         "node": ">=0.8"
     },
     "devDependencies": {
-        "nodeunit":  "0.7.x"
+        "nodeunit":  "0.7.x",
+        "stream-equal": "0.1.x",
+        "temporary": "0.0.x"
     }
 }

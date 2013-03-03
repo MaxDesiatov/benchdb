@@ -98,38 +98,34 @@ class DB
     else
       throw 'DB.modify: no document id and/or callback specified'
 
-  attachFile: (doc, filepath, cb) ->
-    url = "#{ @root }#{ doc._id }/attachment?rev=#{ doc._rev }"
-    mime file.path, (error, filetype) ->
-      if error?
-        cb error, {}
-      else
-        httpProto url, method: 'PUT', ((req) ->
-          boundaryKey = Math.random().toString(16) # random string
-          # the header for the one and only part (need to use CRLF here)
-          req.setHeader('Content-Type', 'multipart/form-data; boundary="'+boundaryKey+'"')
-          request.write(
-            '--' + boundaryKey + '\r\n'
-            # use your file's mime type here, if known
-            + "Content-Type: #{ filetype }\r\n"
-            # "name" is the name of the form field
-            # "filename" is the name of the original file
-            + 'Content-Disposition: form-data; name="my_file"; filename="my_file.bin"\r\n'
-            + 'Content-Transfer-Encoding: binary\r\n\r\n')
+  downloadAttachment: (doc, filename, directory, cb) ->
+    if docIdOk doc._id
+      url = "#{ @root }#{ doc._id }/#{ filename }"
+      httpProtoPipe url, path.join(filename, directory), method: 'GET', null, cb
+    else
+      throw 'DB.downloadAttachment: no document id specified'
 
-          # maybe write directly to the socket here?
-          fs.createReadStream(filepath, { bufferSize: 4 * 1024 }).pipe(req, { end: false }).on 'end', ->
-            # mark the end of the one and only part
-            req.end('\r\n--' + boundaryKey + '--')), cb
+  attachFile: (doc, filepath, cb) ->
+    if docIdOk doc._id
+      url = "#{ @root }#{ doc._id }/attachment?rev=#{ doc._rev }"
+      httpBodyFile url, 'PUT', filepath, cb
+    else
+      throw 'DB.attachFile: no document id specified'
 
 jsonHeader = 'Content-Type': 'application/json'
 
-httpProto = (url, options, startCb, endCb) ->
-  options = _(options).extend(urlParse url)
-
-  result = ''
-
+httpProtoPipe = (url, filepath, options, startCb, endCb) ->
   callback = (response) ->
+    response.pipe fs.createWriteStream filepath
+
+    if _.isFunction endCb
+      response.on 'end', -> endCb null, {}
+
+  httpProto url, options, startCb, callback
+
+httpProtoJson = (url, options, startCb, endCb) ->
+  callback = (response) ->
+    result = ''
     response.on 'data', (chunk) ->
       result += chunk
 
@@ -142,8 +138,13 @@ httpProto = (url, options, startCb, endCb) ->
             result)
         endCb null, res
 
-  req = http.request(options, callback)
-  if _.isFunction(startCb)
+  httpProto url, options, startCb, callback
+
+httpProto = (url, options, startCb, requestCb) ->
+  options = _(options).extend(urlParse url)
+
+  req = http.request options, requestCb
+  if _.isFunction startCb
     startCb req
   req.end()
 
@@ -154,13 +155,29 @@ httpBodyJson = (url, method, body, endCb) ->
     endCb = body
   else if not _.isEmpty body
     startCb = (request) ->
-      request.write(JSON.stringify body)
+      request.write JSON.stringify body
     options.headers = jsonHeader
 
-  httpProto url, options, startCb, endCb
+  httpProtoJson url, options, startCb, endCb
+
+httpBodyFile = (url, method, filepath, endCb) ->
+  options = method: method
+
+  mime filepath, (error, filetype) ->
+    if error?
+      cb error, {}
+    else
+      fs.readFile filepath, (err, data) ->
+        if err?
+          cb err, {}
+        else
+          startCb = (request) ->
+            request.write data
+          options.headers = 'Content-Type': filetype
+          httpProto url, options, startCb, endCb
 
 httpGet = (url, cb) ->
-  httpProto url, method: 'GET', null, cb
+  httpProtoJson url, method: 'GET', null, cb
 httpPut = (url, body, endCb) -> httpBodyJson url, 'PUT', body, endCb
 httpPost = (url, body, endCb) -> httpBodyJson url, 'POST', body, endCb
 httpDelete = (url, body, endCb) -> httpBodyJson url, 'DELETE', body, endCb
@@ -201,8 +218,7 @@ stringifyPackage = (packageName) ->
         fileContents = fs.readFileSync file, 'UTF-8'
 
         result =
-          extend result,
-                _.reduce(modulePath.reverse(), reduceFun, fileContents)
+          _(result).extend _.reduce(modulePath.reverse(), reduceFun, fileContents)
 
   result
 

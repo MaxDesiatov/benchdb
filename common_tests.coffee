@@ -1,6 +1,9 @@
 db = require './common'
 a = require 'async'
 _ = require 'underscore'
+streamEqual = require 'stream-equal'
+fs = require 'fs'
+Tempfile = require 'temporary/lib/file'
 
 testdoc = { _id: 'testdoc', testprop: 41 }
 
@@ -33,7 +36,10 @@ steps = (test, testDb) ->
               test failed"
       testDb.modify _(testdoc).extend(testprop: 42, _rev: res._rev), cb)
     ((res, cb) ->
-      test.ok res.ok, 'document modification test failed'
+        test.ok res.ok, 'document modification test failed'
+        generateRandomFile cb),
+    ((res, cb) ->
+      fs.unlink res
       testDb.retrieve testdoc, cb),
     ((res, cb) ->
       test.equals res.testprop, 42, "document modification property comparison
@@ -46,16 +52,27 @@ steps = (test, testDb) ->
       test.ok not res, 'db removal test #2 failed'
       cb())], -> test.done()
 
+minBytes = 1024 * 1024 * 10
+maxBytes = 1024 * 1024 * 100
+
+generateRandomFile = (cb) ->
+  file = new Tempfile
+  endRandom = _.random minBytes, maxBytes
+  devRandom = fs.createReadStream '/dev/random', { start: 0, end: endRandom }
+  devRandom.on 'end', -> cb null, file.path
+  devRandom.pipe fs.createWriteStream file.path
+
 chars = 'abcdefghijklmnopqrstuvwxyz'
+randChar = -> chars[_.random(0, chars.length - 1)]
 
 generateDbName = (host, port, endCb) ->
-  name = chars[_.random(0, chars.length - 1)]
+  name = randChar()
   exists = false
   a.whilst (-> exists), ((cb) ->
     testDb = new db host, port, name
     testDb.exists (error, res) ->
       exists = res.db_name is name
-      name += chars[_.random(0, chars.length - 1)]
+      name += randChar()
       cb()), -> endCb name
 
 module.exports =
