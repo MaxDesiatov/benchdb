@@ -3,11 +3,15 @@ a = require 'async'
 _ = require 'underscore'
 streamEqual = require 'stream-equal'
 fs = require 'fs'
+path = require 'path'
 Tempfile = require 'temporary/lib/file'
+Tempdir = require 'temporary/lib/dir'
 
 testdoc = { _id: 'testdoc', testprop: 41 }
 
 steps = (test, testDb) ->
+  uploadedFile = ''
+  downloadedFile = ''
   a.waterfall [
     _(testDb.exists).bind(testDb),
     ((res, cb) ->
@@ -36,14 +40,30 @@ steps = (test, testDb) ->
               test failed"
       testDb.modify _(testdoc).extend(testprop: 42, _rev: res._rev), cb)
     ((res, cb) ->
-        test.ok res.ok, 'document modification test failed'
-        generateRandomFile cb),
+      test.ok res.ok, 'document modification test failed'
+      generateRandomFile cb),
     ((res, cb) ->
-      fs.unlink res
+      uploadedFile = res
+      testDb.uploadAttachment testdoc, res, cb),
+    ((res, cb) ->
+      test.ok res.ok
+      test.equals res.id testdoc._id
       testDb.retrieve testdoc, cb),
     ((res, cb) ->
       test.equals res.testprop, 42, "document modification property comparison
-                    test failed"
+                          test failed"
+      dir = (new Tempdir).path
+      filename = Object.keys(doc._attachment)[0]
+      downloadedFile = path.join dir, filename
+      testDb.downloadAttachment res, filename, dir, cb),
+    ((res, cb) ->
+      uploadedStream = fs.createReadStream uploadedFile
+      downloadedStream = fs.createReadStream downloadedFile
+      streamEqual uploadedStream, downloadedStream, cb),
+    ((res, cb) ->
+      test.ok res
+      fs.unlink uploadedFile
+      fs.unlink downloadedFile
       testDb.removeItself cb),
     ((res, cb) ->
       test.ok res.ok, 'db removal test #1 failed'
@@ -106,4 +126,3 @@ module.exports =
         ((res, cb) ->
           test.ok not res, 'checkExists cleanup test #2 failed'
           cb())], -> test.done()
-

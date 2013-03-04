@@ -5,6 +5,7 @@ fs = require 'fs'
 walk = require 'walkdir'
 _ = require 'underscore'
 a = require 'async'
+mime = require 'mime-magic'
 
 class DB
   docIdOk = (docId) -> _.isString(docId) or _.isNumber(docId)
@@ -105,9 +106,10 @@ class DB
     else
       throw 'DB.downloadAttachment: no document id specified'
 
-  attachFile: (doc, filepath, cb) ->
+  uploadAttachment: (doc, filepath, cb) ->
     if docIdOk doc._id
-      url = "#{ @root }#{ doc._id }/attachment?rev=#{ doc._rev }"
+      filename = path.basename filepath
+      url = "#{ @root }#{ doc._id }/#{ filename }?rev=#{ doc._rev }"
       httpBodyFile url, 'PUT', filepath, cb
     else
       throw 'DB.attachFile: no document id specified'
@@ -141,7 +143,7 @@ httpProtoJson = (url, options, startCb, endCb) ->
   httpProto url, options, startCb, callback
 
 httpProto = (url, options, startCb, requestCb) ->
-  options = _(options).extend(urlParse url)
+  options = _(options).extend urlParse url
 
   req = http.request options, requestCb
   if _.isFunction startCb
@@ -162,19 +164,24 @@ httpBodyJson = (url, method, body, endCb) ->
 
 httpBodyFile = (url, method, filepath, endCb) ->
   options = method: method
+  stats = {}
+  filetype = ''
 
-  mime filepath, (error, filetype) ->
-    if error?
-      cb error, {}
-    else
-      fs.readFile filepath, (err, data) ->
-        if err?
-          cb err, {}
-        else
-          startCb = (request) ->
-            request.write data
-          options.headers = 'Content-Type': filetype
-          httpProto url, options, startCb, endCb
+  a.waterfall [
+    _(mime).partial(filepath),
+    ((ft, cb) ->
+      filetype = ft
+      fs.stat filepath, cb),
+    ((s, cb) ->
+      stats = s
+      fs.readFile filepath, cb),
+    ((data, stats, filetype, cb) ->
+      startCb = (request) ->
+        request.write data
+      options.headers =
+        'Content-Type': filetype
+        'Content-Length': stats.size
+      httpProtoJson url, options, startCb, cb)], endCb
 
 httpGet = (url, cb) ->
   httpProtoJson url, method: 'GET', null, cb
@@ -208,8 +215,8 @@ stringifyPackage = (packageName) ->
       for file in walk.sync mainDir when path.extname(file) is '.js'
         relativeFilePath = path.relative mainDir, file
         modulePath =
-          path.join(path.dirname(relativeFilePath),
-                    path.basename(relativeFilePath, '.js')).split(path.sep)
+          path.join(path.dirname relativeFilePath,
+                    path.basename(relativeFilePath, '.js')).split path.sep
         reduceFun = (res, el) ->
           result = {}
           result[el] = res
