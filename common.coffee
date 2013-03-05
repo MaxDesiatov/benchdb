@@ -11,6 +11,7 @@ class DB
   docIdOk = (docId) -> _.isString(docId) or _.isNumber(docId)
 
   constructor: (host, port, dbname) ->
+    @alwaysCheckExists = false
     if port? and dbname?
       @root = "http://#{ host }:#{ port }/#{ dbname }/"
     else if _.isString host
@@ -106,9 +107,8 @@ class DB
     else
       throw 'DB.downloadAttachment: no document id specified'
 
-  uploadAttachment: (doc, filepath, cb) ->
+  uploadAttachment: (doc, filepath, filename, cb) ->
     if docIdOk doc._id
-      filename = path.basename filepath
       url = "#{ @root }#{ doc._id }/#{ filename }?rev=#{ doc._rev }"
       httpBodyFile url, 'PUT', filepath, cb
     else
