@@ -175,7 +175,7 @@ httpBodyFile = (url, method, filepath, endCb) ->
     ((s, cb) ->
       stats = s
       fs.readFile filepath, cb),
-    ((data, stats, filetype, cb) ->
+    ((data, cb) ->
       startCb = (request) ->
         request.write data
       options.headers =
