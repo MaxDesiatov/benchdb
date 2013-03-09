@@ -1,4 +1,4 @@
-db = require './common'
+db = require './benchdb'
 a = require 'async'
 _ = require 'underscore'
 streamEqual = require 'stream-equal'
@@ -10,8 +10,9 @@ Tempdir = require 'temporary/lib/dir'
 testdoc = { _id: 'testdoc', testprop: 41 }
 
 steps = (test, testDb) ->
-  uploadedFile = ''
-  downloadedFile = ''
+  uploadedFile = null
+  downloadedFile = null
+  revisionBeforeUpload = null
   a.waterfall [
     _(testDb.exists).bind(testDb),
     ((res, cb) ->
@@ -41,19 +42,24 @@ steps = (test, testDb) ->
       testDb.modify _(testdoc).extend(testprop: 42, _rev: res._rev), cb)
     ((res, cb) ->
       test.ok res.ok, 'document modification test failed'
+      test.ok res.rev?
+      revisionBeforeUpload = res.rev
       generateRandomFile cb),
     ((res, cb) ->
       uploadedFile = res
-      testDb.uploadAttachment testdoc, res, cb),
+      updatedDoc = _(testdoc).extend(_rev: revisionBeforeUpload)
+      testDb.uploadAttachment updatedDoc, res, path.basename(res), cb),
     ((res, cb) ->
       test.ok res.ok
-      test.equals res.id testdoc._id
+      test.ok res.id?
+      test.equals res.id, testdoc._id
       testDb.retrieve testdoc, cb),
     ((res, cb) ->
       test.equals res.testprop, 42, "document modification property comparison
                           test failed"
       dir = (new Tempdir).path
-      filename = Object.keys(doc._attachment)[0]
+      test.ok res._attachments?
+      filename = Object.keys(res._attachments)[0]
       downloadedFile = path.join dir, filename
       testDb.downloadAttachment res, filename, dir, cb),
     ((res, cb) ->
@@ -70,7 +76,9 @@ steps = (test, testDb) ->
       testDb.existsBool cb),
     ((res, cb) ->
       test.ok not res, 'db removal test #2 failed'
-      cb())], -> test.done()
+      cb())], (err) ->
+                test.ok not err, 'error absence final callback test failed'
+                test.done()
 
 minBytes = 1024 * 1024 * 10
 maxBytes = 1024 * 1024 * 100
@@ -83,7 +91,7 @@ generateRandomFile = (cb) ->
   devRandom.pipe fs.createWriteStream file.path
 
 chars = 'abcdefghijklmnopqrstuvwxyz'
-randChar = -> chars[_.random(0, chars.length - 1)]
+randChar = -> chars[_.random 0, chars.length - 1]
 
 generateDbName = (host, port, endCb) ->
   name = randChar()

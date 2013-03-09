@@ -1,7 +1,7 @@
 {
     "name": "benchdb",
     "preferGlobal": false,
-    "version": "0.0.7",
+    "version": "0.0.8",
     "author": "Max Desyatov <max.desyatov@gmail.com>",
     "description": "CouchDB API wrapper with support for document validation",
     "contributors": [
@@ -10,7 +10,7 @@
             "email": "max.desyatov@gmail.com"
         }
     ],
-    "main": "./common",
+    "main": "./benchdb",
     "repository": {
         "type": "git",
         "url": "https://github.com/explicitcall/benchdb.git"
