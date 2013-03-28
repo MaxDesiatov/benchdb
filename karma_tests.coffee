@@ -1,0 +1,1 @@
+nodeunit.run suite: require './common_tests.coffee'

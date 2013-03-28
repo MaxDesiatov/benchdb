@@ -1,44 +1,38 @@
+path = require 'path'
+_ = require 'underscore'
+async = require 'async'
+request = require('request').defaults json: true
+fs = require 'fs'
+
 class DB
   docIdOk = (docId) -> _.isString(docId) or _.isNumber(docId)
-  path = null
-  _ = null
-  async = null
-  http = null
+  wrapCb = (cb) -> (err, _, body) -> cb err, body
 
-  setupEnv = (env) ->
-    path = env and env.path or require 'path'
-    _ = env and env._ or require 'underscore'
-    async = env and env.async or require 'async'
-    http = env and env.http or require './node'
-
-  constructor: (host, port, dbname, env) ->
+  constructor: (host, port, dbname) ->
     @alwaysCheckExists = false
     if port? and dbname?
-      setupEnv env
       @root = "http://#{ host }:#{ port }/#{ dbname }/"
-    else
-      setupEnv port
-      if _ and _.isString host
+    else if _.isString host
         @root = host
         if _.last(@root) isnt '/'
           @root = "#{ @root }/"
-      else
-        throw 'BenchDB.constructor: attempt to create a DB without name and host'
+    else
+      throw 'BenchDB.constructor: attempt to create a DB without name and host'
 
     @validationDocUrl = "#{ @root }_design/validation"
 
   exists: (doc, cb) ->
     if _.isObject(doc) and docIdOk(doc._id)
-      http.get "#{ @root }#{ doc._id }", cb
+      request "#{ @root }#{ doc._id }", wrapCb cb
     else if docIdOk(doc)
-      http.get "#{ @root }#{ doc }", cb
+      request "#{ @root }#{ doc }", wrapCb cb
     else if _.isFunction doc
-      http.get @root, doc
+      request @root, wrapCb doc
     else
       throw 'BenchDB.exists: no document id and/or callback specified'
 
   existsBool: (doc, cb) ->
-    if _.isFunction(doc)
+    if _.isFunction doc
       @exists (error, res) -> doc(error, res.error isnt 'not_found')
     else
       @exists doc, (error, res) -> cb(error, res.error isnt 'not_found')
@@ -64,57 +58,59 @@ class DB
           endCb error
 
   retrieveAll: (cb) ->
-    http.get "#{ @root }_all_docs?include_docs=true", cb
+    request "#{ @root }_all_docs?include_docs=true", wrapCb cb
 
   retrieve: (doc, cb) ->
     if _.isObject(doc) and docIdOk(doc._id)
-      http.get "#{ @root }#{ doc._id }", cb
+      request "#{ @root }#{ doc._id }", wrapCb cb
     else if docIdOk(doc)
-      http.get "#{ @root }#{ doc }", cb
+      request "#{ @root }#{ doc }", wrapCb cb
     else
       throw 'BenchDB.retrieve: no document id and/or callback specified'
 
   createItself: (cb) ->
-    http.put @root, cb
+    request.put @root, wrapCb cb
 
   create: (doc, cb) ->
     if _.isObject(doc) and docIdOk(doc._id)
-      http.put "#{ @root }#{ doc._id }", doc, cb
+      request.put "#{ @root }#{ doc._id }", json: doc, wrapCb cb
     else if docIdOk(doc)
-      http.put "#{ @root }#{ doc }", cb
+      request.put "#{ @root }#{ doc }", wrapCb cb
     else if _.isFunction cb
-      http.post @root, doc, cb
+      request.post @root, json: doc, wrapCb cb
     else
       throw 'BenchDB.create: no document id and/or callback specified'
 
   removeItself: (cb) ->
-    http.delete @root, cb
+    request.del @root, wrapCb cb
 
   remove: (doc, cb) ->
     if _.isObject(doc) and docIdOk(doc._id)
-      http.delete "#{ @root }#{ doc._id }", cb
-    else if docIdOk(doc)
-      http.delete "#{ @root }#{ doc }", cb
+      request.del "#{ @root }#{ doc._id }", wrapCb cb
+    else if docIdOk doc
+      request.del "#{ @root }#{ doc }", wrapCb cb
     else
       throw 'BenchDB.remove: no document id and/or callback specified'
 
   modify: (doc, cb) ->
     if _.isObject(doc) and docIdOk(doc._id)
-      http.put "#{ @root }#{ doc._id }", doc, cb
+      request.put "#{ @root }#{ doc._id }", json: doc, wrapCb cb
     else
       throw 'BenchDB.modify: no document id and/or callback specified'
 
   downloadAttachment: (doc, filename, directory, cb) ->
     if docIdOk doc._id
       url = "#{ @root }#{ doc._id }/#{ filename }"
-      http.protoPipe url, path.join(directory, filename), method: 'GET', null, cb
+      filepath = path.join(directory, filename)
+      request(url, wrapCb cb).pipe fs.createWriteStream filepath
     else
       throw 'BenchDB.downloadAttachment: no document id specified'
 
   uploadAttachment: (doc, filepath, filename, cb) ->
     if docIdOk doc._id
       url = "#{ @root }#{ doc._id }/#{ filename }?rev=#{ doc._rev }"
-      http.bodyFile url, 'PUT', filepath, cb
+      fs.createReadStream(filepath).pipe request.put url, wrapCb cb
+      true
     else
       throw 'BenchDB.attachFile: no document id specified'
 

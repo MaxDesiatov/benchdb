@@ -1,4 +1,4 @@
-db = require './benchdb'
+db = require './benchdb.coffee'
 a = require 'async'
 _ = require 'underscore'
 streamEqual = require 'stream-equal'
