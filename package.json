@@ -1,7 +1,7 @@
 {
     "name": "benchdb",
     "preferGlobal": false,
-    "version": "0.0.9",
+    "version": "0.0.10",
     "author": "Max Desyatov <max.desyatov@gmail.com>",
     "description": "CouchDB API wrapper with support for document validation",
     "contributors": [
@@ -32,8 +32,14 @@
         "node": ">=0.10"
     },
     "devDependencies": {
-        "nodeunit":  "0.7.x",
+        "nodeunit":  "0.8.x",
         "stream-equal": "0.1.x",
-        "temporary": "0.0.x"
+        "temporary": "0.0.x",
+        "karma-nodeunit": "0.0.x"
+    },
+    "browser": {
+        "request": "./node_modules/browser-request/dist/ender/request.js",
+        "fs": false,
+        "./tests_config": "./tests/browser_config"
     }
 }

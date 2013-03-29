@@ -8,14 +8,21 @@ class DB
   docIdOk = (docId) -> _.isString(docId) or _.isNumber(docId)
   wrapCb = (cb) -> (err, _, body) -> cb err, body
 
-  constructor: (host, port, dbname) ->
+  constructor: (host, port, pathPrefix, dbname) ->
     @alwaysCheckExists = false
-    if port? and dbname?
-      @root = "http://#{ host }:#{ port }/#{ dbname }/"
+    if port? and _.isString pathPrefix
+      if _.first(pathPrefix) isnt '/'
+        pathPrefix = "/#{ pathPrefix }"
+      if _.last(pathPrefix) isnt '/'
+        pathPrefix = "#{ pathPrefix }/"
+      if dbname?
+        @root = "http://#{ host }:#{ port }#{ pathPrefix }#{ dbname }/"
+      else
+        @root = "http://#{ host }:#{ port }#{ pathPrefix }"
     else if _.isString host
-        @root = host
-        if _.last(@root) isnt '/'
-          @root = "#{ @root }/"
+      @root = host
+      if _.last(@root) isnt '/'
+        @root = "#{ @root }/"
     else
       throw 'BenchDB.constructor: attempt to create a DB without name and host'
 
@@ -32,30 +39,16 @@ class DB
       throw 'BenchDB.exists: no document id and/or callback specified'
 
   existsBool: (doc, cb) ->
-    if _.isFunction doc
-      @exists (error, res) -> doc(error, res.error isnt 'not_found')
-    else
-      @exists doc, (error, res) -> cb(error, res.error isnt 'not_found')
+    resTest = (res) -> _.isObject(res) and res.error isnt 'not_found'
+    if _.isFunction doc then @exists (error, res) -> doc error, resTest res
+    else @exists doc, (error, res) -> cb error, resTest res
 
   checkExists: (endCb) ->
     async.waterfall [
-      ((cb) =>
-        @existsBool cb),
-      ((res, cb) =>
-        if res
-          cb 'ok'
-        else
-          @createItself cb),
-      ((res, cb) ->
-        if res.ok
-          cb 'ok'
-        else
-          cb res)],
-      (error) ->
-        if error is 'ok'
-          endCb null
-        else
-          endCb error
+      ((cb) => @existsBool cb),
+      ((res, cb) => if res then cb 'ok' else @createItself cb),
+      ((res, cb) -> if res.ok then cb 'ok' else cb res)],
+      (error) -> if error is 'ok' then endCb null else endCb error
 
   retrieveAll: (cb) ->
     request "#{ @root }_all_docs?include_docs=true", wrapCb cb
@@ -81,14 +74,13 @@ class DB
     else
       throw 'BenchDB.create: no document id and/or callback specified'
 
-  removeItself: (cb) ->
-    request.del @root, wrapCb cb
+  removeItself: (cb) -> request.del @root, wrapCb cb
 
-  remove: (doc, cb) ->
-    if _.isObject(doc) and docIdOk(doc._id)
-      request.del "#{ @root }#{ doc._id }", wrapCb cb
-    else if docIdOk doc
-      request.del "#{ @root }#{ doc }", wrapCb cb
+  remove: (doc, rev, cb) ->
+    if _.isObject(doc) and docIdOk(doc._id) and _.isFunction rev
+      request.del "#{ @root }#{ doc._id }?rev=#{ doc._rev }", wrapCb rev
+    else if docIdOk(doc) and _.isString rev
+      request.del "#{ @root }#{ doc }?rev=#{ rev }", wrapCb cb
     else
       throw 'BenchDB.remove: no document id and/or callback specified'
 

@@ -41,8 +41,11 @@ autoWatch = false;
 // - Safari (only Mac)
 // - PhantomJS
 // - IE (only Windows)
-browsers = ['Chrome', 'Firefox', 'Safari', 'PhantomJS'];
-
+browsers = ['Chrome', 'Firefox', 'Safari'];
+var proxiesConfig = require('./tests_config');
+proxies =  {
+    '/couch': 'http://' + proxiesConfig.host + ':' + proxiesConfig.port
+};
 // If browser does not capture in given timeout [ms], kill it
 captureTimeout = 5000;
 
