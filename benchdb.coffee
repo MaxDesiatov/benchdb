@@ -74,7 +74,8 @@ class DB
     else
       throw 'BenchDB.create: no document id and/or callback specified'
 
-  removeItself: (cb) -> request.del @root, wrapCb cb
+  removeItself: (cb) ->
+    request.del @root, wrapCb cb
 
   remove: (doc, rev, cb) ->
     if _.isObject(doc) and docIdOk(doc._id) and _.isFunction rev
