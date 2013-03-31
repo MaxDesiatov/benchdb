@@ -1,7 +1,6 @@
 db = require '../benchdb.coffee'
 async = require 'async'
 _ = require 'underscore'
-config = require './tests_config.coffee'
 
 testdoc = _id: 'testdoc', testprop: 41
 
@@ -43,10 +42,10 @@ generateDbName = (url, endCb) ->
       name += randChar()
       cb()), -> endCb name
 
-couchUrl = "http://#{config.host}:#{config.port}#{config.pathPrefix}"
-dbUrl = (dbName) -> "#{ couchUrl }#{ dbName }"
+module.exports = (config) ->
+  couchUrl = "http://#{config.host}:#{config.port}#{config.pathPrefix}"
+  dbUrl = (dbName) -> "#{ couchUrl }#{ dbName }"
 
-module.exports =
   basicSuite:
     testFullUrl: (test) ->
       generateDbName couchUrl, (dbName) ->

@@ -1,1 +1,1 @@
-nodeunit.run suite: require './common_tests.coffee'
+nodeunit.run suite: (require './common_tests.coffee')(require './browser_config.coffee')

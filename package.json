@@ -24,7 +24,7 @@
         "underscore": "1.4.x",
         "async": "0.2.x",
         "request": "2.16.x",
-        "browser-request": "0.2.x"
+        "browser-request": "https://github.com/explicitcall/browser-request/tarball/master"
     },
     "analyze": false,
     "license": "MIT",

@@ -1,4 +1,4 @@
-common = require './common_tests'
+common = (require './common_tests.coffee')(require './node_config.coffee')
 
 async = require 'async'
 _ = require 'underscore'

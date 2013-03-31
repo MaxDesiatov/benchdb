@@ -5,8 +5,8 @@ basePath = '';
 
 // list of files / patterns to load in the browser
 files = [
-    'node_modules/karma-nodeunit/lib/nodeunit.js',
-    'node_modules/karma-nodeunit/lib/adapter.js',
+    '../node_modules/karma-nodeunit/lib/nodeunit.js',
+    '../node_modules/karma-nodeunit/lib/adapter.js',
     'karma_tests.js'
 ];
 
@@ -42,7 +42,8 @@ autoWatch = false;
 // - PhantomJS
 // - IE (only Windows)
 browsers = ['Chrome', 'Firefox', 'Safari'];
-var proxiesConfig = require('./tests_config');
+
+var proxiesConfig = require(__dirname + '/node_config.coffee');
 proxies =  {
     '/couch': 'http://' + proxiesConfig.host + ':' + proxiesConfig.port
 };
