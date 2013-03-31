@@ -1,45 +1,47 @@
 {
-    "name": "benchdb",
-    "preferGlobal": false,
-    "version": "0.0.10",
-    "author": "Max Desyatov <max.desyatov@gmail.com>",
-    "description": "CouchDB API wrapper with support for document validation",
-    "contributors": [
-        {
-            "name": "Max Desyatov",
-            "email": "max.desyatov@gmail.com"
-        }
-    ],
-    "main": "./benchdb",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/explicitcall/benchdb.git"
-    },
-    "keywords": [
-        "couchdb",
-        "validation"
-    ],
-    "dependencies" : {
-        "coffee-script":  "1.6.x",
-        "underscore": "1.4.x",
-        "async": "0.2.x",
-        "request": "2.16.x",
-        "browser-request": "https://github.com/explicitcall/browser-request/tarball/master"
-    },
-    "analyze": false,
-    "license": "MIT",
-    "engines": {
-        "node": ">=0.10"
-    },
-    "devDependencies": {
-        "nodeunit":  "0.8.x",
-        "stream-equal": "0.1.x",
-        "temporary": "0.0.x",
-        "karma-nodeunit": "0.0.x"
-    },
-    "browser": {
-        "request": "./node_modules/browser-request/dist/ender/request.js",
-        "fs": false,
-        "./tests_config.coffee": "./browser_config.coffee"
+  "name": "benchdb",
+  "preferGlobal": false,
+  "version": "0.0.10",
+  "author": "Max Desyatov <max.desyatov@gmail.com>",
+  "description": "CouchDB API wrapper with support for document validation",
+  "contributors": [
+    {
+      "name": "Max Desyatov",
+      "email": "max.desyatov@gmail.com"
     }
+  ],
+  "main": "./benchdb",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/explicitcall/benchdb.git"
+  },
+  "keywords": [
+    "couchdb",
+    "validation"
+  ],
+  "dependencies": {
+    "coffee-script": "1.6.x",
+    "underscore": "1.4.x",
+    "async": "0.2.x",
+    "request": "2.16.x",
+    "browser-request": "https://github.com/explicitcall/browser-request/tarball/master"
+  },
+  "analyze": false,
+  "license": "MIT",
+  "engines": {
+    "node": ">=0.10"
+  },
+  "devDependencies": {
+    "nodeunit": "0.8.x",
+    "stream-equal": "0.1.x",
+    "temporary": "0.0.x",
+    "karma-nodeunit": "0.0.x",
+    "grunt-karma": "~0.3.0",
+    "grunt-browserify2": "~0.1.5",
+    "coffeeify": "~0.3.0"
+  },
+  "browser": {
+    "request": "./node_modules/browser-request/dist/ender/request.js",
+    "fs": false
+  }
 }
