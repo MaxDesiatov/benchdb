@@ -6,7 +6,9 @@ fs = require 'fs'
 
 class DB
   docIdOk = (docId) -> _.isString(docId) or _.isNumber(docId)
-  wrapCb = (cb) -> (err, _, body) -> cb err, body
+  wrapCb = (cb) ->
+    (err, dummy, body) ->
+      cb err, body
 
   constructor: (host, port, pathPrefix, dbname) ->
     @alwaysCheckExists = false

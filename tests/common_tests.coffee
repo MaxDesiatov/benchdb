@@ -51,14 +51,14 @@ module.exports = (config) ->
       generateDbName couchUrl, (dbName) ->
         fullUrl = dbUrl dbName
         testDb = new db fullUrl
-        test.equals testDb.root, "#{fullUrl}/"
+        test.equals testDb.root, "#{fullUrl}/", 'db root url test failed'
         basicSteps test, testDb
 
     testSplitUrl: (test) ->
       generateDbName couchUrl, (dbName) ->
         fullUrl = dbUrl dbName
-        testDb = new db config.host, config.port, dbName
-        test.equals testDb.root, "#{fullUrl}/"
+        testDb = new db config.host, config.port, config.pathPrefix, dbName
+        test.equals testDb.root, "#{fullUrl}/", 'db root url test failed'
         basicSteps test, testDb
 
     testCheckExists: (test) ->
@@ -83,7 +83,7 @@ module.exports = (config) ->
   complexSuite:
     setUp: (cb) ->
       generateDbName couchUrl, (dbName) =>
-        @testDb = new db config.host, config.port, dbName
+        @testDb = new db config.host, config.port, config.pathPrefix, dbName
         @testDb.createItself cb
 
     tearDown: (endCb) ->
