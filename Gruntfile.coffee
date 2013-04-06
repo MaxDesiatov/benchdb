@@ -1,3 +1,5 @@
+require('trace');
+
 module.exports = (grunt) ->
   grunt.initConfig
     pkg: grunt.file.readJSON 'package.json'
@@ -10,7 +12,7 @@ module.exports = (grunt) ->
       tests:
         entry: './tests/karma_tests.coffee'
         compile: './tests/karma_tests.js'
-#        debug: true
+        debug: true
         beforeHook: (bundle) ->
           bundle.transform 'coffeeify'
 
@@ -19,3 +21,5 @@ module.exports = (grunt) ->
 
   grunt.loadNpmTasks 'grunt-karma'
   grunt.loadNpmTasks 'grunt-browserify2'
+
+  Error.stackTraceLimit = 50
