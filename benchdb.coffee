@@ -7,8 +7,11 @@ fs = require 'fs'
 class DB
   docIdOk = (docId) -> _.isString(docId) or _.isNumber(docId)
   wrapCb = (cb) ->
-    (err, dummy, body) ->
-      cb err, body
+    if _.isFunction cb
+      (err, dummy, body) ->
+        cb err, body
+    else
+      throw 'BenchDB: passed callback is not a function'
 
   constructor: (host, port, pathPrefix, dbname) ->
     @alwaysCheckExists = false

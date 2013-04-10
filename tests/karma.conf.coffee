@@ -31,9 +31,10 @@ colors = true;
 logLevel = LOG_INFO;
 
 # enable / disable watching file and executing tests whenever any file changes
-autoWatch = false;
+autoWatch = false
 
-browsers = ['Chrome', 'Firefox', 'Safari'];
+# browser-request seems to be broken in firefox
+browsers = ['Safari']
 path = require 'path'
 proxiesConfig = require path.resolve(__dirname) + '/node_config.coffee'
 proxies =  {

@@ -38,7 +38,8 @@
     "karma-nodeunit": "0.0.x",
     "grunt-karma": "~0.3.0",
     "grunt-browserify2": "~0.1.5",
-    "coffeeify": "~0.3.0"
+    "coffeeify": "~0.3.0",
+    "grunt-contrib-nodeunit": "~0.1.2"
   },
   "browser": {
     "request": "./node_modules/browser-request/dist/ender/request.js",

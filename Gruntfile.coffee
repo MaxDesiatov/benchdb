@@ -3,6 +3,8 @@ require('trace');
 module.exports = (grunt) ->
   grunt.initConfig
     pkg: grunt.file.readJSON 'package.json'
+    nodeunit:
+      all: ['tests/node_tests.coffee']
     karma:
       continuous:
         configFile: './tests/karma.conf.coffee'
@@ -16,8 +18,9 @@ module.exports = (grunt) ->
         beforeHook: (bundle) ->
           bundle.transform 'coffeeify'
 
-  grunt.registerTask('test', 'nodeunit browserify2 karma')
+  grunt.registerTask('test', ['nodeunit', 'browserify2', 'karma'])
 
+  grunt.loadNpmTasks 'grunt-contrib-nodeunit'
   grunt.loadNpmTasks 'grunt-karma'
   grunt.loadNpmTasks 'grunt-browserify2'
 

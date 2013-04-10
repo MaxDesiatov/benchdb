@@ -86,8 +86,8 @@ module.exports = (config) ->
         @testDb = new db config.host, config.port, config.pathPrefix, dbName
         @testDb.createItself cb
 
-    tearDown: (endCb) ->
-      @testDb.removeItself endCb
+    tearDown: (cb) ->
+      @testDb.removeItself cb
 
     testExists: (test) ->
       @testDb.existsBool (err, res) ->
