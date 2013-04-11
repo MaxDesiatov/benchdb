@@ -4,6 +4,25 @@ async = require 'async'
 request = require('request').defaults json: true
 fs = require 'fs'
 
+class Instance
+  constructor: (@api) ->
+
+  save: (cb) ->
+    @api.existsBool @data, (error, res) =>
+      if error?
+        throw "BenchDB::Instance.save: #{ error }"
+      else if res
+        @api.modify @data, (error, res) =>
+          if not error and res.error is 'conflict'
+            @api.retrieve @data, (error, res) =>
+          else
+            cb error, res
+      else
+        @api.create @data, cb
+
+class Type
+  constructor: (@name, @api) ->
+
 class DB
   docIdOk = (docId) -> _.isString(docId) or _.isNumber(docId)
   wrapCb = (cb) ->
@@ -61,7 +80,7 @@ class DB
   retrieve: (doc, cb) ->
     if _.isObject(doc) and docIdOk(doc._id)
       request "#{ @root }#{ doc._id }", wrapCb cb
-    else if docIdOk(doc)
+    else if docIdOk doc
       request "#{ @root }#{ doc }", wrapCb cb
     else
       throw 'BenchDB.retrieve: no document id and/or callback specified'
@@ -79,8 +98,7 @@ class DB
     else
       throw 'BenchDB.create: no document id and/or callback specified'
 
-  removeItself: (cb) ->
-    request.del @root, wrapCb cb
+  removeItself: (cb) -> request.del @root, wrapCb cb
 
   remove: (doc, rev, cb) ->
     if _.isObject(doc) and docIdOk(doc._id) and _.isFunction rev

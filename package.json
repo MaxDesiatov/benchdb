@@ -1,7 +1,7 @@
 {
   "name": "benchdb",
   "preferGlobal": false,
-  "version": "0.0.10",
+  "version": "0.0.11",
   "author": "Max Desyatov <max.desyatov@gmail.com>",
   "description": "CouchDB API wrapper with support for document validation",
   "contributors": [
