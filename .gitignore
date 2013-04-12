@@ -1,3 +1,4 @@
 .idea/
 node_modules/
+tests/karma_tests.js
 .DS_Store

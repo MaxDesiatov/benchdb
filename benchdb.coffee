@@ -4,24 +4,70 @@ async = require 'async'
 request = require('request').defaults json: true
 fs = require 'fs'
 
+apiOk = (api) ->
+  if not api instanceOf DB
+    throw 'BenchDB: attempt to create an object with wrong backend'
+
 class Instance
-  constructor: (@api) ->
+  constructor: (@api, @id, @type, @data) ->
+    apiOk @api
+    if not _.isString @id
+      throw 'BenchDB::Instance: attempt to create an instance without id'
+    if not _.isObject @data
+      @data = {}
+    if not @type instanceOf Type
+      throw 'BenchDB::Instance: atempt to create an instance with wrong type'
+    else
+      @data.type = @type.name
+    @data._id = @id
+
+  refresh: (cb) ->
+    apiOk @api
+    @api.retrieve @id, (error, res) =>
+      if not error
+        @data = res
+      cb error, res
 
   save: (cb) ->
+    apiOk @api
     @api.existsBool @data, (error, res) =>
       if error?
-        throw "BenchDB::Instance.save: #{ error }"
+        cb error, res
       else if res
-        @api.modify @data, (error, res) =>
-          if not error and res.error is 'conflict'
-            @api.retrieve @data, (error, res) =>
-          else
-            cb error, res
+        isConflicted = true
+        modifyAttempt = (whilstCb) =>
+          @api.modify @data, (error, res) =>
+            if not error and res.error is 'conflict'
+              isConflicted = true
+              @api.retrieve @data, (error, res) =>
+                if error?
+                  whilstCb error, res
+                else
+                  @data = res
+                  whilstCb error, res
+            else
+              isConflicted = false
+              whilstCb error, res
+        async.doWhilst modifyAttempt, (-> isConflicted), cb
       else
         @api.create @data, cb
 
 class Type
-  constructor: (@name, @api) ->
+  constructor: (@api, @name) ->
+    apiOk @api
+
+  create: (isSingleton, id, cb) ->
+    apiOk @api
+    if _.isFunction isSingleton
+      cb = isSingleton
+    else if _.isFunction id
+      cb = id
+    if _.isString isSingleton
+      id = isSingleton
+    else if not _.isString id
+      id = null
+    if not _.isBoolean isSingleton
+      isSingleton = true
 
 class DB
   docIdOk = (docId) -> _.isString(docId) or _.isNumber(docId)
