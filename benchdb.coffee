@@ -17,9 +17,8 @@ class Instance
       @data = {}
     if not @type instanceOf Type
       throw 'BenchDB::Instance: atempt to create an instance with wrong type'
-    else
-      @data.type = @type.name
     @data._id = @id
+    Object.defineProperty @data, 'type', value: @type.name
 
   refresh: (cb) ->
     apiOk @api
