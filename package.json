@@ -24,7 +24,8 @@
     "underscore": "1.4.x",
     "async": "0.2.x",
     "request": "2.16.x",
-    "browser-request": "https://github.com/explicitcall/browser-request/tarball/master"
+    "browser-request": "https://github.com/explicitcall/browser-request/tarball/master",
+    "weak": "~0.2.2"
   },
   "analyze": false,
   "license": "MIT",
@@ -43,6 +44,7 @@
   },
   "browser": {
     "request": "./node_modules/browser-request/dist/ender/request.js",
-    "fs": false
+    "fs": false,
+    "weak": false
   }
 }
