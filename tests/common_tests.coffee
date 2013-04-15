@@ -1,8 +1,10 @@
-db = require '../benchdb.coffee'
+db = require '../api.coffee'
+Type = require '../benchdb.coffee'
 async = require 'async'
 _ = require 'underscore'
 
-testdoc = _id: 'testdoc', testprop: 41
+testdoc = _id: 'testdoc', testprop: 41, type: 'blahblah'
+testtype = 'testtype'
 
 basicSteps = (test, testDb) ->
   async.waterfall [
@@ -104,25 +106,25 @@ module.exports = (config) ->
         test.done()
 
     testDocument: (test) ->
+      testdocInstance = _.clone testdoc
       async.waterfall [
-        ((cb) =>
-          @testDb.create testdoc, cb),
+        ((cb) => @testDb.create testdocInstance, cb),
         ((res, cb) =>
           test.ok res.ok, 'document creation test failed'
-          test.equals res.id, testdoc._id, "document creation id comparison
+          test.equals res.id, testdocInstance._id, "document creation id comparison
             test failed"
-          @testDb.retrieve testdoc, cb),
+          @testDb.retrieve testdocInstance, cb),
         ((res, cb) =>
           test.equals res.testprop, testdoc.testprop,
             "document creation property comparison test failed"
-          @testDb.modify _(testdoc).extend(testprop: 42, _rev: res._rev), cb),
+          @testDb.modify _(testdocInstance).extend(testprop: 42, _rev: res._rev), cb),
         ((res, cb) =>
           test.ok res.ok, 'document modification #1 test failed'
           test.ok res.rev?, 'document modification #2 test failed'
-          @testDb.remove  _(testdoc).extend(_rev: res.rev), cb),
+          @testDb.remove  _(testdocInstance).extend(_rev: res.rev), cb),
         ((res, cb) =>
           test.ok res.ok, 'document removal test #1 failed'
-          @testDb.existsBool testdoc, cb),
+          @testDb.existsBool testdocInstance, cb),
         ((res, cb) =>
           test.ok not res, 'document removal test #2 failed'
           cb())],
@@ -130,3 +132,71 @@ module.exports = (config) ->
           test.ok not err, 'error absence final callback test failed'
           test.done()
 
+    testUuids: (test) ->
+      async.waterfall [
+        ((cb) => @testDb.uuids cb),
+        ((res, cb) =>
+          test.ok _.isArray(res), 'uuids type test failed'
+          test.equals res.length, 1, 'uuids length test failed'
+          @testDb.uuids 5, cb),
+        ((res, cb) ->
+          test.equals res.length, 5, 'uuids length test #2'
+          cb())],
+        (err) ->
+          test.ok not err, 'error absence final callback test failed'
+          test.done()
+
+    testTypeApi: (test) ->
+      t = new Type @testDb, 'testtype'
+      t.api = 'mangle-schmangle'
+      test.equals t.api, @testDb, 'Test.api property freeze test failed'
+      test.done()
+
+    testInstanceUuidGenerated: (test) ->
+      t = new Type @testDb, 'testtype'
+      t.instance false, (err, res) ->
+        test.equals err, null,
+          'instance uuid generation error absence test failed'
+        test.ok _.isString(res.data._id),
+          'instance uuid generation id type test failed'
+        test.ok res.data._id.length > 0,
+          'instance uuid generation id length test failed'
+        test.done()
+
+    testInstanceType: (test) ->
+      t = new Type @testDb, testtype
+      t.instance false, (err, res) ->
+        test.equals err, null,
+          'created instance type generation error absence test failed'
+        test.equals res.data.type, testtype, 'created instance type test failed'
+        test.done()
+
+    testTypeWithoutName: (test) ->
+      test.throws (-> new Type @testDb)
+      test.throws (-> new Type @testDb, '')
+      test.done()
+
+    testInstanceSave: (test) ->
+      t = new Type @testDb, testtype
+      t.instance false, (err, res) ->
+        test.equals err, null, 'save instance error absence test #1 failed'
+        oldid = res.data._id
+        _(res.data).extend testdoc
+        test.equals res.data._id, oldid,
+          'instance data id is immutable test failed'
+        test.equals res.id, oldid,
+          'instance id is consistent with data test failed'
+        test.equals res.data.type, testtype,
+          'instance data type is immutable test failed'
+        res.save (err) ->
+          test.equals err, null, 'save instance error absence test #2 failed'
+          t.instance false, oldid, (err, res) ->
+            test.equals err, null, 'save instance error absence test #3 failed'
+            test.equals res.data.testprop, undefined,
+              'save instance empty property test failed'
+            res.refresh (err) ->
+              test.equals err, null,
+                'save instance error absence test #4 failed'
+              test.equals res.data.testprop, 41,
+                'save instance refresh property test failed'
+              test.done()

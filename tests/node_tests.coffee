@@ -7,11 +7,15 @@ fs = require 'fs'
 path = require 'path'
 Tempfile = require 'temporary/lib/file'
 Tempdir = require 'temporary/lib/dir'
+Type = require '../benchdb.coffee'
+weak = require 'weak'
 
 testdoc = _id: 'testdoc', testprop: 41
+testid = 'testid'
+testval = 'testval'
 
-minBytes = 1024 * 1024 * 10
-maxBytes = 1024 * 1024 * 100
+minBytes = 1024 * 1024 * 1
+maxBytes = 1024 * 1024 * 10
 
 generateRandomFile = (cb) ->
   file = new Tempfile
@@ -68,5 +72,17 @@ common.complexSuite.testAttachment = (test) ->
       cb())], (err) ->
                 test.ok not err, 'error absence final callback test failed'
                 test.done()
+
+common.complexSuite.testTypeCache = (test) ->
+  t = new Type @testDb, 'testtype'
+  t.instance true, testid, (err, res1) ->
+    test.equals err, null, 'type cache error absence test failed'
+    test.deepEqual weak.get(t.cache[testid]), res1,
+      'type cache deep equality test failed'
+    res1.data.testprop = testval
+    t.instance true, testid, (err, res2) ->
+      test.equals res2.data.testprop, testval,
+        'type cache singleton instance test failed'
+      test.done()
 
 module.exports = common

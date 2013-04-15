@@ -1,9 +1,9 @@
 {
   "name": "benchdb",
   "preferGlobal": false,
-  "version": "0.0.11",
+  "version": "0.1.0",
   "author": "Max Desyatov <max.desyatov@gmail.com>",
-  "description": "CouchDB API wrapper with support for document validation",
+  "description": "CouchDB ODM",
   "contributors": [
     {
       "name": "Max Desyatov",
@@ -17,7 +17,7 @@
   },
   "keywords": [
     "couchdb",
-    "validation"
+    "odm"
   ],
   "dependencies": {
     "coffee-script": "1.6.x",
@@ -25,7 +25,8 @@
     "async": "0.2.x",
     "request": "2.16.x",
     "browser-request": "https://github.com/explicitcall/browser-request/tarball/master",
-    "weak": "~0.2.2"
+    "weak": "~0.2.2",
+    "arguejs": "https://github.com/explicitcall/ArgueJS/tarball/master"
   },
   "analyze": false,
   "license": "MIT",
@@ -46,5 +47,6 @@
     "request": "./node_modules/browser-request/dist/ender/request.js",
     "fs": false,
     "weak": false
-  }
+  },
+  "bundledDependencies": [ "browser-request" ]
 }

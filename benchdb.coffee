@@ -1,178 +1,111 @@
-path = require 'path'
+weak = require 'weak'
+docIdOk = require('./common.coffee').docIdOk
 _ = require 'underscore'
-async = require 'async'
-request = require('request').defaults json: true
-fs = require 'fs'
+__ = require 'arguejs'
+DB = require './api.coffee'
+
+# FIXME: should also test for WeakMap in browsers
+weakOk = _.isFunction(weak) or (_.isObject(weak) and not _.isEmpty(weak))
 
 apiOk = (api) ->
-  if not api instanceOf DB
+  if not api instanceof DB
     throw 'BenchDB: attempt to create an object with wrong backend'
 
 class Instance
-  constructor: (@api, @id, @type, @data) ->
-    apiOk @api
-    if not _.isString @id
+  attemptApiCall = (instance, apiCall, continueOnConflict, cb) ->
+    isConflicted = true
+    attemptCycle = (whilstCb) ->
+      apiCall instance.data, (error, res) ->
+        if not error and res.error is 'conflict'
+          isConflicted = true
+          intance.refresh whilstCb
+        else
+          isConflicted = false
+          whilstCb error, res
+    if continueOnConflict
+      async.doWhilst attemptCycle, (-> isConflicted), cb
+    else
+      attemptCycle cb
+
+  constructor: (api, id, @type) ->
+    apiOk api
+    Object.defineProperty @, 'api', value: api
+    if not docIdOk id
       throw 'BenchDB::Instance: attempt to create an instance without id'
-    if not _.isObject @data
-      @data = {}
-    if not @type instanceOf Type
+    Object.defineProperty @, 'id', value: id
+    if not @type instanceof Type
       throw 'BenchDB::Instance: atempt to create an instance with wrong type'
-    @data._id = @id
-    Object.defineProperty @data, 'type', value: @type.name
+    Object.defineProperty @, 'data',
+      set: (newData) =>
+        delete newData._id
+        delete newData.type
+        Object.defineProperty newData, '_id', value: id
+        Object.defineProperty newData, 'type', value: @type.name
+        @__data = newData
+      get: => @__data
+    @data = {}
 
   refresh: (cb) ->
-    apiOk @api
     @api.retrieve @id, (error, res) =>
       if not error
         @data = res
       cb error, res
 
-  save: (cb) ->
-    apiOk @api
-    @api.existsBool @data, (error, res) =>
+  save: ->
+    { continueOnConflict, cb } =
+      __ continueOnConflict: [Boolean, true], cb: Function
+    @api.existsBool @id, (error, res) =>
       if error?
         cb error, res
       else if res
-        isConflicted = true
-        modifyAttempt = (whilstCb) =>
-          @api.modify @data, (error, res) =>
-            if not error and res.error is 'conflict'
-              isConflicted = true
-              @api.retrieve @data, (error, res) =>
-                if error?
-                  whilstCb error, res
-                else
-                  @data = res
-                  whilstCb error, res
-            else
-              isConflicted = false
-              whilstCb error, res
-        async.doWhilst modifyAttempt, (-> isConflicted), cb
+        attemptApiCall @, _(@api.modify).bind(@api), continueOnConflict, cb
       else
         @api.create @data, cb
 
+  remove: ->
+    { continueOnConflict, cb } =
+      __ continueOnConflict: [Boolean, true], cb: Function
+    if @data._rev
+      attemptApiCall @, _(@api.remove).bind(@api), continueOnConflict, cb
+    else
+      cb "attempt to remove a document when it doesn't have a revision", null
+
 class Type
-  constructor: (@api, @name) ->
-    apiOk @api
-
-  create: (isSingleton, id, cb) ->
-    apiOk @api
-    if _.isFunction isSingleton
-      cb = isSingleton
-    else if _.isFunction id
-      cb = id
-    if _.isString isSingleton
-      id = isSingleton
-    else if not _.isString id
-      id = null
-    if not _.isBoolean isSingleton
-      isSingleton = true
-
-class DB
-  docIdOk = (docId) -> _.isString(docId) or _.isNumber(docId)
-  wrapCb = (cb) ->
-    if _.isFunction cb
-      (err, dummy, body) ->
-        cb err, body
+  constructor: (api, name) ->
+    if not _.isString(name) or name.length < 1
+      throw 'BenchDB::Type: atempt to create a type without a name'
+    Object.defineProperty @, 'name', value: name
+    apiOk api
+    Object.defineProperty @, 'api', value: api
+    if not weakOk
+      Object.defineProperty @, 'cache', value: {}
     else
-      throw 'BenchDB: passed callback is not a function'
+      @cache = {}
 
-  constructor: (host, port, pathPrefix, dbname) ->
-    @alwaysCheckExists = false
-    if port? and _.isString pathPrefix
-      if _.first(pathPrefix) isnt '/'
-        pathPrefix = "/#{ pathPrefix }"
-      if _.last(pathPrefix) isnt '/'
-        pathPrefix = "#{ pathPrefix }/"
-      if dbname?
-        @root = "http://#{ host }:#{ port }#{ pathPrefix }#{ dbname }/"
+  instance: ->
+    { isSingleton, id, cb } = __
+      isSingleton: Boolean, id: [String], cb: Function
+    cacheAndCallback = =>
+      if isSingleton and weakOk
+        strong = @cache[id] and weak.get(@cache[id])
+        if not _.isEmpty(strong) and strong instanceof Instance
+          cb null, strong
+        else
+          strong = new Instance @api, id, @
+          @cache[id] = weak strong
+          cb null, strong
       else
-        @root = "http://#{ host }:#{ port }#{ pathPrefix }"
-    else if _.isString host
-      @root = host
-      if _.last(@root) isnt '/'
-        @root = "#{ @root }/"
+        cb null, (new Instance @api, id, @)
+    if id?
+      cacheAndCallback()
     else
-      throw 'BenchDB.constructor: attempt to create a DB without name and host'
+      @api.uuids (err, res) ->
+        if err?
+          cb err, res
+        else if _.isArray res
+          id = res[0]
+          cacheAndCallback()
+        else
+          throw 'BenchDB::Type.instance: inconsistent behavior of @api.uuids'
 
-    @validationDocUrl = "#{ @root }_design/validation"
-
-  exists: (doc, cb) ->
-    if _.isObject(doc) and docIdOk(doc._id)
-      request "#{ @root }#{ doc._id }", wrapCb cb
-    else if docIdOk(doc)
-      request "#{ @root }#{ doc }", wrapCb cb
-    else if _.isFunction doc
-      request @root, wrapCb doc
-    else
-      throw 'BenchDB.exists: no document id and/or callback specified'
-
-  existsBool: (doc, cb) ->
-    resTest = (res) -> _.isObject(res) and res.error isnt 'not_found'
-    if _.isFunction doc then @exists (error, res) -> doc error, resTest res
-    else @exists doc, (error, res) -> cb error, resTest res
-
-  checkExists: (endCb) ->
-    async.waterfall [
-      ((cb) => @existsBool cb),
-      ((res, cb) => if res then cb 'ok' else @createItself cb),
-      ((res, cb) -> if res.ok then cb 'ok' else cb res)],
-      (error) -> if error is 'ok' then endCb null else endCb error
-
-  retrieveAll: (cb) ->
-    request "#{ @root }_all_docs?include_docs=true", wrapCb cb
-
-  retrieve: (doc, cb) ->
-    if _.isObject(doc) and docIdOk(doc._id)
-      request "#{ @root }#{ doc._id }", wrapCb cb
-    else if docIdOk doc
-      request "#{ @root }#{ doc }", wrapCb cb
-    else
-      throw 'BenchDB.retrieve: no document id and/or callback specified'
-
-  createItself: (cb) ->
-    request.put @root, wrapCb cb
-
-  create: (doc, cb) ->
-    if _.isObject(doc) and docIdOk(doc._id)
-      request.put "#{ @root }#{ doc._id }", json: doc, wrapCb cb
-    else if docIdOk(doc)
-      request.put "#{ @root }#{ doc }", wrapCb cb
-    else if _.isFunction cb
-      request.post @root, json: doc, wrapCb cb
-    else
-      throw 'BenchDB.create: no document id and/or callback specified'
-
-  removeItself: (cb) -> request.del @root, wrapCb cb
-
-  remove: (doc, rev, cb) ->
-    if _.isObject(doc) and docIdOk(doc._id) and _.isFunction rev
-      request.del "#{ @root }#{ doc._id }?rev=#{ doc._rev }", wrapCb rev
-    else if docIdOk(doc) and _.isString rev
-      request.del "#{ @root }#{ doc }?rev=#{ rev }", wrapCb cb
-    else
-      throw 'BenchDB.remove: no document id and/or callback specified'
-
-  modify: (doc, cb) ->
-    if _.isObject(doc) and docIdOk(doc._id)
-      request.put "#{ @root }#{ doc._id }", json: doc, wrapCb cb
-    else
-      throw 'BenchDB.modify: no document id and/or callback specified'
-
-  downloadAttachment: (doc, filename, directory, cb) ->
-    if docIdOk doc._id
-      url = "#{ @root }#{ doc._id }/#{ filename }"
-      filepath = path.join(directory, filename)
-      request(url, wrapCb cb).pipe fs.createWriteStream filepath
-    else
-      throw 'BenchDB.downloadAttachment: no document id specified'
-
-  uploadAttachment: (doc, filepath, filename, cb) ->
-    if docIdOk doc._id
-      url = "#{ @root }#{ doc._id }/#{ filename }?rev=#{ doc._rev }"
-      fs.createReadStream(filepath).pipe request.put url, wrapCb cb
-      true
-    else
-      throw 'BenchDB.attachFile: no document id specified'
-
-module.exports = DB
+module.exports = Type
