@@ -117,7 +117,8 @@ module.exports = (config) ->
         ((res, cb) =>
           test.equals res.testprop, testdoc.testprop,
             "document creation property comparison test failed"
-          @testDb.modify _(testdocInstance).extend(testprop: 42, _rev: res._rev), cb),
+          _(testdocInstance).extend(testprop: 42, _rev: res._rev)
+          @testDb.modify testdocInstance, cb),
         ((res, cb) =>
           test.ok res.ok, 'document modification #1 test failed'
           test.ok res.rev?, 'document modification #2 test failed'
@@ -176,7 +177,7 @@ module.exports = (config) ->
       test.throws (-> new Type @testDb, '')
       test.done()
 
-    testInstanceSave: (test) ->
+    testInstanceSaveRefresh: (test) ->
       t = new Type @testDb, testtype
       t.instance false, (err, res) ->
         test.equals err, null, 'save instance error absence test #1 failed'
@@ -190,13 +191,50 @@ module.exports = (config) ->
           'instance data type is immutable test failed'
         res.save (err) ->
           test.equals err, null, 'save instance error absence test #2 failed'
-          t.instance false, oldid, (err, res) ->
+          t.instance false, oldid, (err, newRes) ->
             test.equals err, null, 'save instance error absence test #3 failed'
-            test.equals res.data.testprop, undefined,
+            test.equals newRes.data.testprop, undefined,
               'save instance empty property test failed'
             res.refresh (err) ->
               test.equals err, null,
                 'save instance error absence test #4 failed'
-              test.equals res.data.testprop, 41,
+              test.equals newRes.data.testprop, 41,
                 'save instance refresh property test failed'
+              test.equals newRes.data.type, testtype,
+                'instance data type is saved test failed'
               test.done()
+
+    testInstanceRemoveRefresh: (test) ->
+      t = new Type @testDb, testtype
+      t.instance false, (err, res) ->
+        res.save ->
+          res.refresh (err, savedData) ->
+            test.deepEqual res.data, savedData,
+              'remove instance save test failed'
+            res.remove (err) ->
+              test.equals err, null, 'remove instance error absence test failed'
+              res.refresh (err, notFoundRes) ->
+                test.equals err, null,
+                  'remove instance error absence test #2 failed'
+                test.ok _.isObject(notFoundRes),
+                  'remove instance refresh response is object test failed'
+                test.equals notFoundRes.error, 'not_found',
+                  'remove instance refresh response error test failed'
+                test.equals notFoundRes.reason, 'deleted',
+                  'remove instance refresh response error reason test failed'
+                test.done()
+
+    testTypeAll: (test) ->
+      tt = new Type @testDb, testtype
+      dt = new Type @testDb, 'dummytype'
+      iterator = (t) -> (n, next) -> t.instance false, (dummy, res) ->
+        res.save (err) -> next err, res.id
+      async.times 5, iterator(dt), (err) ->
+        async.times 10, iterator(tt), (err, docIds) ->
+          tt.all (err, docs) ->
+            test.ok _.isArray(docs), 'all type instances result type test failed'
+            test.equals docs.length, 10,
+              'all type instances result length test failed'
+            i = _.intersection (doc.id for doc in docs), docIds
+            test.equals i.length, 10, 'all type instances result ids test failed'
+            test.done()

@@ -1,7 +1,7 @@
 {
   "name": "benchdb",
   "preferGlobal": false,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": "Max Desyatov <max.desyatov@gmail.com>",
   "description": "CouchDB ODM",
   "contributors": [
@@ -26,7 +26,9 @@
     "request": "2.16.x",
     "browser-request": "https://github.com/explicitcall/browser-request/tarball/master",
     "weak": "~0.2.2",
-    "arguejs": "https://github.com/explicitcall/ArgueJS/tarball/master"
+    "arguejs": "https://github.com/explicitcall/ArgueJS/tarball/master",
+    "cssauron-falafel": "0.0.x",
+    "falafel": "~0.2.1"
   },
   "analyze": false,
   "license": "MIT",
@@ -48,5 +50,7 @@
     "fs": false,
     "weak": false
   },
-  "bundledDependencies": [ "browser-request" ]
+  "bundledDependencies": [
+    "browser-request"
+  ]
 }

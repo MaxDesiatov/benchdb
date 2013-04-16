@@ -3,6 +3,9 @@ docIdOk = require('./common.coffee').docIdOk
 _ = require 'underscore'
 __ = require 'arguejs'
 DB = require './api.coffee'
+async = require 'async'
+falafel = require 'falafel'
+lang = require 'cssauron-falafel'
 
 # FIXME: should also test for WeakMap in browsers
 weakOk = _.isFunction(weak) or (_.isObject(weak) and not _.isEmpty(weak))
@@ -39,8 +42,9 @@ class Instance
       set: (newData) =>
         delete newData._id
         delete newData.type
-        Object.defineProperty newData, '_id', value: id
-        Object.defineProperty newData, 'type', value: @type.name
+        Object.defineProperty newData, '_id', { value: id, enumerable: true }
+        Object.defineProperty newData, 'type',
+          { value: @type.name, enumerable: true }
         @__data = newData
       get: => @__data
     @data = {}
@@ -71,6 +75,21 @@ class Instance
       cb "attempt to remove a document when it doesn't have a revision", null
 
 class Type
+  filterSource = (doc) ->
+    filterObject = {}
+    result = true
+
+    lastField = '_id'
+    for filterField, filterValue of filterObject
+      if (filterValue is null and doc[filterField] is undefined) or
+      (doc[filterField] isnt filterValue)
+        result = false
+        break
+      lastField = filterField
+
+    if result
+      emit doc[lastField]
+
   constructor: (api, name) ->
     if not _.isString(name) or name.length < 1
       throw 'BenchDB::Type: atempt to create a type without a name'
@@ -107,5 +126,48 @@ class Type
           cacheAndCallback()
         else
           throw 'BenchDB::Type.instance: inconsistent behavior of @api.uuids'
+
+  all: (cb) -> @filterByField cb
+
+  filterByField: ->
+    { field, value, cb } =
+      __ field: [String], value: [undefined, null], cb: Function
+    filterObject = type: @name
+    if field?
+      filterObject[field] = null
+    mapSource = (falafel ('var f = ' + filterSource + ''), (node) ->
+      if lang('assign')(node) and node.left.name is 'filterObject'
+        node.update "filterObject = #{ JSON.stringify filterObject }"
+      else if lang('variable-decl')(node) and
+      node.declarations[0].id.name is 'f'
+        node.update node.declarations[0].init.source()).toString()
+
+    docId = "_design/_benchdb"
+    viewName = "#{@name}_#{field}"
+
+    getViewResults = =>
+      @api.retrieve "#{docId}/_view/#{viewName}", (err, res) =>
+        if err?
+          cb err, res
+        else
+          iterator = (id, mapCb) => @instance true, id, mapCb
+          async.map (row.id for row in res.rows), iterator, (err, results) ->
+            cb err, results
+    @api.retrieve docId, (err, res) =>
+      if err?
+        cb err, res
+        return
+      if res.error is 'not_found'
+        res = _id: docId, language: 'javascript', views: {}
+        res.views[viewName] = {}
+      if res.views[viewName].map isnt mapSource or res.views[viewName].reduce?
+        res.views[viewName] = map: mapSource
+        @api.modify res, (err, errRes) ->
+          if err?
+            cb err, errRes
+          else
+            getViewResults()
+      else
+        getViewResults()
 
 module.exports = Type
