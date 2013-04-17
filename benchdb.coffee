@@ -6,6 +6,7 @@ DB = require './api.coffee'
 async = require 'async'
 falafel = require 'falafel'
 lang = require 'cssauron-falafel'
+url = require 'url'
 
 # FIXME: should also test for WeakMap in browsers
 weakOk = _.isFunction(weak) or (_.isObject(weak) and not _.isEmpty(weak))
@@ -82,7 +83,7 @@ class Type
     lastField = '_id'
     for filterField, filterValue of filterObject
       if (filterValue is null and doc[filterField] is undefined) or
-      (doc[filterField] isnt filterValue)
+      (filterValue isnt null and doc[filterField] isnt filterValue)
         result = false
         break
       lastField = filterField
@@ -130,29 +131,45 @@ class Type
   all: (cb) -> @filterByField cb
 
   filterByField: ->
-    { field, value, cb } =
-      __ field: [String], value: [undefined, null], cb: Function
+    { viewOpts, field, value, cb } =
+      __
+        viewOpts: [Object, {}]
+        field: [String]
+        value: [undefined, null]
+        cb: Function
     filterObject = type: @name
     if field?
       filterObject[field] = null
+    # for some reason esprima doesn't parse stray function expressions
+    # so transforming filterSource to variable assignment...
     mapSource = (falafel ('var f = ' + filterSource + ''), (node) ->
       if lang('assign')(node) and node.left.name is 'filterObject'
         node.update "filterObject = #{ JSON.stringify filterObject }"
+      # ...and then back to function expression
       else if lang('variable-decl')(node) and
       node.declarations[0].id.name is 'f'
         node.update node.declarations[0].init.source()).toString()
 
     docId = "_design/_benchdb"
-    viewName = "#{@name}_#{field}"
+    viewName = "#{@name}_#{if field then field else ''}"
 
     getViewResults = =>
-      @api.retrieve "#{docId}/_view/#{viewName}", (err, res) =>
+      if value?
+        viewOpts.key = value
+      stringifiedFields = ['key', 'keys', 'startkey', 'endkey']
+      for field, value of viewOpts when field in stringifiedFields
+        viewOpts[field] = JSON.stringify value
+      query = url.format query: viewOpts
+      @api.retrieve "#{docId}/_view/#{viewName}#{query}", (err, res) =>
         if err?
           cb err, res
-        else
-          iterator = (id, mapCb) => @instance true, id, mapCb
+        else if res.rows?
+          iterator = (id, next) => @instance true, id, next
           async.map (row.id for row in res.rows), iterator, (err, results) ->
             cb err, results
+        else
+          cb 'malformed view results', res
+
     @api.retrieve docId, (err, res) =>
       if err?
         cb err, res

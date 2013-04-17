@@ -195,7 +195,7 @@ module.exports = (config) ->
             test.equals err, null, 'save instance error absence test #3 failed'
             test.equals newRes.data.testprop, undefined,
               'save instance empty property test failed'
-            res.refresh (err) ->
+            newRes.refresh (err) ->
               test.equals err, null,
                 'save instance error absence test #4 failed'
               test.equals newRes.data.testprop, 41,
@@ -229,7 +229,7 @@ module.exports = (config) ->
       dt = new Type @testDb, 'dummytype'
       iterator = (t) -> (n, next) -> t.instance false, (dummy, res) ->
         res.save (err) -> next err, res.id
-      async.times 5, iterator(dt), (err) ->
+      async.times 5, iterator(dt), ->
         async.times 10, iterator(tt), (err, docIds) ->
           tt.all (err, docs) ->
             test.ok _.isArray(docs), 'all type instances result type test failed'
@@ -237,4 +237,39 @@ module.exports = (config) ->
               'all type instances result length test failed'
             i = _.intersection (doc.id for doc in docs), docIds
             test.equals i.length, 10, 'all type instances result ids test failed'
+            test.done()
+
+    testTypeFilterByFieldValue: (test) ->
+      t = new Type @testDb, testtype
+      iterator = (n, next) -> t.instance false, (dummy, res) ->
+        res.data.filterField = n
+        res.save (err) -> next err, res.id
+      async.times 5, iterator, ->
+        t.filterByField 'filterField', 3, (err, docs) ->
+          test.equals docs.length, 1, 'filterByField value length test failed'
+          if docs.lengthte
+            docs[0].refresh (err, res) ->
+              test.equals err, null,
+                'filterByField value error absence test failed'
+              test.equals res.filterField, 3,
+                'filterByField value equality test failed'
+              test.done()
+          else
+            test.done()
+
+    testTypeFilterByFieldOpts: (test) ->
+      t = new Type @testDb, testtype
+      iterator = (n, next) -> t.instance false, (dummy, res) ->
+        res.data.filterField = n
+        res.save (err) -> next err, res.id
+      async.times 5, iterator, ->
+        t.filterByField {startkey: 2, endkey: 4}, 'filterField', (err, docs) ->
+          test.equals docs.length, 3, 'filterByField value length test failed'
+          async.each docs, ((doc, next) -> doc.refresh next), (err) ->
+            test.equal err, null,
+              'filterByField values error absence test failed'
+            filterFieldValues =
+              _.chain(docs).pluck('data').pluck('filterField').value()
+            test.deepEqual filterFieldValues, [2, 3, 4],
+              'filterByField values equality test failed'
             test.done()

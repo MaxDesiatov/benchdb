@@ -18,7 +18,8 @@ module.exports = (grunt) ->
         beforeHook: (bundle) ->
           bundle.transform 'coffeeify'
 
-  grunt.registerTask('test', ['nodeunit', 'browserify2', 'karma'])
+  grunt.registerTask('karma-test', ['browserify2', 'karma'])
+  grunt.registerTask('test', ['nodeunit', 'karma-test'])
 
   grunt.loadNpmTasks 'grunt-contrib-nodeunit'
   grunt.loadNpmTasks 'grunt-karma'

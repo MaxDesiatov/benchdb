@@ -8,6 +8,7 @@ url = require 'url'
 docIdOk = require('./common.coffee').docIdOk
 
 class DB
+  uuidsCache = []
   wrapCb = ->
     { cb } = __ cb: Function
     (err, dummy, body) ->
@@ -114,7 +115,15 @@ class DB
 
   uuids: ->
     { count, cb } = __ count: [Number, 1], cb: Function
-    request url.resolve(@root, "../_uuids?count=#{count}"),
-    (err, dummy, body) -> cb err, body and body.uuids
+    if uuidsCache.length < count
+      request url.resolve(@root, "../_uuids?count=#{count + 100}"),
+        (err, dummy, body) =>
+          if body and body.uuids
+            uuidsCache = body.uuids
+            @uuids count, cb
+    else
+      result = _(uuidsCache).take count
+      uuidsCache = _(uuidsCache).drop count
+      cb null, result
 
 module.exports = DB
