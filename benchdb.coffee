@@ -177,7 +177,8 @@ class Type
       if res.error is 'not_found'
         res = _id: docId, language: 'javascript', views: {}
         res.views[viewName] = {}
-      if res.views[viewName].map isnt mapSource or res.views[viewName].reduce?
+      if not _.isObject res.views[viewName] or
+      res.views[viewName].map isnt mapSource or res.views[viewName].reduce?
         res.views[viewName] = map: mapSource
         @api.modify res, (err, errRes) ->
           if err?
