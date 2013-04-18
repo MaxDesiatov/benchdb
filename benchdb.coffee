@@ -58,7 +58,7 @@ class Instance
 
   save: ->
     { continueOnConflict, cb } =
-      __ continueOnConflict: [Boolean, true], cb: Function
+      __ continueOnConflict: [Boolean, false], cb: Function
     @api.existsBool @id, (error, res) =>
       if error?
         cb error, res
@@ -69,7 +69,7 @@ class Instance
 
   remove: ->
     { continueOnConflict, cb } =
-      __ continueOnConflict: [Boolean, true], cb: Function
+      __ continueOnConflict: [Boolean, false], cb: Function
     if @data._rev
       attemptApiCall @, _(@api.remove).bind(@api), continueOnConflict, cb
     else
