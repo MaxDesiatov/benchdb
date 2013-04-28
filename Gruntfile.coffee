@@ -1,28 +1,42 @@
-require('trace');
+path = require 'path'
 
 module.exports = (grunt) ->
+  # load all grunt tasks
+  require('matchdep').filterDev('grunt-*').forEach(grunt.loadNpmTasks)
+
   grunt.initConfig
     pkg: grunt.file.readJSON 'package.json'
     nodeunit:
-      all: ['tests/node_tests.coffee']
+      all: ['dist/tests/node_tests.js']
     karma:
       continuous:
-        configFile: './tests/karma.conf.coffee'
+        configFile: path.resolve __dirname, './dist/tests/karma.js'
         singleRun: true
 
-    browserify2:
-      tests:
-        entry: './tests/karma_tests.coffee'
-        compile: './tests/karma_tests.js'
-        debug: true
-        beforeHook: (bundle) ->
-          bundle.transform 'coffeeify'
+    browserify:
+      karma:
+        src: ['dist/tests/karma_tests.js']
+        dest: 'dist/tests/karma_dist.js'
 
-  grunt.registerTask('karma-test', ['browserify2', 'karma'])
-  grunt.registerTask('test', ['nodeunit', 'karma-test'])
+    clean:
+      dist: ['dist']
 
-  grunt.loadNpmTasks 'grunt-contrib-nodeunit'
-  grunt.loadNpmTasks 'grunt-karma'
-  grunt.loadNpmTasks 'grunt-browserify2'
+    coffee:
+      dist:
+        expand: true
+        src: ['{,*/}*.coffee', '!Gruntfile.coffee']
+        dest: 'dist'
+        ext: '.js'
 
-  Error.stackTraceLimit = 50
+    copy:
+      dist:
+        files: [{
+          expand: true
+          dest: 'dist'
+          src: [ 'LICENSE', 'README.md', 'package.json' ]
+        }]
+
+  grunt.registerTask 'dist', ['clean', 'coffee']
+  grunt.registerTask 'publish', ['dist', 'copy']
+  grunt.registerTask 'karma-test', ['dist', 'browserify', 'karma']
+  grunt.registerTask 'test', ['dist', 'nodeunit', 'browserify', 'karma']

@@ -1,5 +1,5 @@
-db = require '../api.coffee'
-Type = require '../benchdb.coffee'
+db = require '../api'
+Type = require '../benchdb'
 async = require 'async'
 _ = require 'underscore'
 

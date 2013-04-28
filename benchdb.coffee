@@ -1,8 +1,8 @@
 weak = require 'weak'
-docIdOk = require('./common.coffee').docIdOk
+docIdOk = require('./common').docIdOk
 _ = require 'underscore'
 __ = require 'arguejs'
-DB = require './api.coffee'
+DB = require './api'
 async = require 'async'
 falafel = require 'falafel'
 lang = require 'cssauron-falafel'

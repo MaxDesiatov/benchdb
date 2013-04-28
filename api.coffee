@@ -5,7 +5,7 @@ async = require 'async'
 request = require('request').defaults json: true
 fs = require 'fs'
 url = require 'url'
-docIdOk = require('./common.coffee').docIdOk
+docIdOk = require('./common').docIdOk
 
 class DB
   uuidsCache = []

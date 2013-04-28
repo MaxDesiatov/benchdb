@@ -1,7 +1,7 @@
 {
   "name": "benchdb",
   "preferGlobal": false,
-  "version": "0.1.4",
+  "version": "0.1.5",
   "author": "Max Desyatov <max.desyatov@gmail.com>",
   "description": "CouchDB ODM",
   "contributors": [
@@ -20,7 +20,6 @@
     "odm"
   ],
   "dependencies": {
-    "coffee-script": "1.6.x",
     "underscore": "1.4.x",
     "async": "0.2.x",
     "request": "2.16.x",
@@ -36,14 +35,27 @@
     "node": ">=0.10"
   },
   "devDependencies": {
+    "coffee-script": "1.6.x",
     "nodeunit": "0.8.x",
     "stream-equal": "0.1.x",
     "temporary": "0.0.x",
     "karma-nodeunit": "0.0.x",
-    "grunt-karma": "~0.3.0",
-    "grunt-browserify2": "~0.1.5",
-    "coffeeify": "~0.3.0",
-    "grunt-contrib-nodeunit": "~0.1.2"
+    "grunt-contrib-nodeunit": "~0.1.2",
+    "grunt-contrib-coffee": "~0.7.0",
+    "matchdep": "~0.1.2",
+    "grunt-contrib-clean": "~0.4.1",
+    "grunt-browserify": "~0.2.3",
+    "grunt-karma-0.9.1": "~0.4.3",
+    "karma-script-launcher": "0.0.1",
+    "karma-firefox-launcher": "0.0.1",
+    "karma-chrome-launcher": "0.0.1",
+    "karma-jasmine": "0.0.1",
+    "karma-requirejs": "0.0.1",
+    "karma-coffee-preprocessor": "0.0.1",
+    "karma-phantomjs-launcher": "0.0.2",
+    "karma": "~0.9.3",
+    "karma-safari-launcher": "~0.0.2",
+    "grunt-contrib-copy": "~0.4.1"
   },
   "browser": {
     "request": "./node_modules/browser-request/dist/ender/request.js",

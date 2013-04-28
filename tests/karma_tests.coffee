@@ -1,6 +1,6 @@
-suite = (require './common_tests.coffee')(require './browser_config.coffee')
+suite = (require './common_tests')(require './browser_config')
 
-Type = require '../benchdb.coffee'
+Type = require '../benchdb'
 _ = require 'underscore'
 
 suite.complexSuite.testTypeCacheFrozen = (test) ->

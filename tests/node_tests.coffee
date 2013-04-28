@@ -1,4 +1,4 @@
-common = (require './common_tests.coffee')(require './node_config.coffee')
+common = (require './common_tests')(require './node_config')
 
 async = require 'async'
 _ = require 'underscore'
@@ -7,7 +7,7 @@ fs = require 'fs'
 path = require 'path'
 Tempfile = require 'temporary/lib/file'
 Tempdir = require 'temporary/lib/dir'
-Type = require '../benchdb.coffee'
+Type = require '../benchdb'
 weak = require 'weak'
 
 testdoc = _id: 'testdoc', testprop: 41
