@@ -98,17 +98,17 @@ class DB
 
   downloadAttachment: (doc, filename, directory, cb) ->
     if docIdOk doc._id
-      url = "#{ @root }#{ doc._id }/#{ filename }"
+      attachmentUrl = "#{ @root }#{ doc._id }/#{ filename }"
       filepath = path.join(directory, filename)
-      request(url, wrapCb cb).pipe fs.createWriteStream filepath
+      request(attachmentUrl, wrapCb cb).pipe fs.createWriteStream filepath
     else
       throw 'BenchDB.downloadAttachment: no document id specified'
 
   #FIXME: should fallback in browsers or support uploading from file input
   uploadAttachment: (doc, filepath, filename, cb) ->
     if docIdOk doc._id
-      url = "#{ @root }#{ doc._id }/#{ filename }?rev=#{ doc._rev }"
-      fs.createReadStream(filepath).pipe request.put url, wrapCb cb
+      attachmentUrl = "#{ @root }#{ doc._id }/#{ filename }?rev=#{ doc._rev }"
+      fs.createReadStream(filepath).pipe request.put attachmentUrl, wrapCb cb
       true
     else
       throw 'BenchDB.attachFile: no document id specified'
