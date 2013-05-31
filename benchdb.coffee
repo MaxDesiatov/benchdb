@@ -153,9 +153,12 @@ class Type
     docId = "_design/_benchdb"
     viewName = "#{@name}_#{if field then field else ''}"
 
+    instantiateRows = (rows) =>
+      iterator = (id, next) => @instance true, id, next
+      async.map (row.id for row in rows), iterator, (err, results) ->
+        cb err, results
+
     getViewResults = =>
-      if value?
-        viewOpts.key = value
       stringifiedFields = ['key', 'keys', 'startkey', 'endkey']
       for field, value of viewOpts when field in stringifiedFields
         viewOpts[field] = JSON.stringify value
@@ -163,10 +166,17 @@ class Type
       @api.retrieve "#{docId}/_view/#{viewName}#{query}", (err, res) =>
         if err?
           cb err, res
-        else if res.rows?
-          iterator = (id, next) => @instance true, id, next
-          async.map (row.id for row in res.rows), iterator, (err, results) ->
-            cb err, results
+        else if _.isArray res.rows
+          # workaround for CouchDB not returning rows when more than one exact
+          # match is found
+          if res.total_rows > 0 and res.rows.length is 0
+            if viewOpts.key and not viewOpts.startkey and not viewOpts.endkey
+              delete viewOpts.key
+              viewOpts.startkey = value
+              viewOpts.endkey = value
+              getViewResults()
+          else
+            instantiateRows res.rows
         else
           cb 'malformed view results', res
 
@@ -177,6 +187,10 @@ class Type
       if res.error is 'not_found'
         res = _id: docId, language: 'javascript', views: {}
         res.views[viewName] = {}
+
+      if value?
+        viewOpts.key = value
+
       if not _.isObject(res.views[viewName]) or
       res.views[viewName].map isnt mapSource or res.views[viewName].reduce?
         res.views[viewName] = map: mapSource
