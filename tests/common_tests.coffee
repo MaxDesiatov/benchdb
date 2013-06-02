@@ -277,25 +277,3 @@ module.exports = (config) ->
             test.deepEqual filterFieldValues, [2, 3, 4],
               'filterByField values equality test failed'
             test.done()
-
-    testTypeFilterByFieldSeveralExactMatches: (test) ->
-      t = new Type @testDb, testtype
-      iterator = (n, next) -> t.instance false, (dummy, res) ->
-        res.data.filterField = 3
-        res.data.filterAnotherField = n % 2
-        res.save (err) -> next err, res.id
-      async.times 5, iterator, ->
-        t.filterByField 'filterField', 3, (err, docs) ->
-          test.equals docs.length, 5, 'filterByField value length test failed'
-          if docs.length
-            docs[0].refresh (err, res) ->
-              test.equals err, null,
-                'filterByField value error absence test failed'
-              test.equals res.filterField, 3,
-                'filterByField value equality test failed'
-              t.filterByField 'filterAnotherField', 0, (err, docs) ->
-                test.equals docs.length, 3,
-                  'filterByField value length test #2 failed'
-                test.done()
-          else
-            test.done()
