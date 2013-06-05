@@ -231,7 +231,8 @@ module.exports = (config) ->
         res.save (err) -> next err, res.id
       async.times 5, iterator(dt), ->
         async.times 10, iterator(tt), (err, docIds) ->
-          tt.all (err, docs) ->
+          tt.all (err, res) ->
+            docs = res.instances
             test.ok _.isArray(docs), 'all type instances result type test failed'
             test.equals docs.length, 10,
               'all type instances result length test failed'
@@ -246,7 +247,8 @@ module.exports = (config) ->
         res.data.filterAnotherField = n % 2
         res.save (err) -> next err, res.id
       async.times 5, iterator, ->
-        t.filterByField 'filterField', 3, (err, docs) ->
+        t.filterByField 'filterField', 3, (err, res) ->
+          docs = res.instances
           test.equals docs.length, 1, 'filterByField value length test failed'
           if docs.length
             docs[0].refresh (err, res) ->
@@ -254,7 +256,8 @@ module.exports = (config) ->
                 'filterByField value error absence test failed'
               test.equals res.filterField, 3,
                 'filterByField value equality test failed'
-              t.filterByField 'filterAnotherField', 0, (err, docs) ->
+              t.filterByField 'filterAnotherField', 0, (err, res) ->
+                docs = res.instances
                 test.equals docs.length, 3,
                   'filterByField value length test #2 failed'
                 test.done()
@@ -267,7 +270,8 @@ module.exports = (config) ->
         res.data.filterField = n
         res.save (err) -> next err, res.id
       async.times 5, iterator, ->
-        t.filterByField {startkey: 2, endkey: 4}, 'filterField', (err, docs) ->
+        t.filterByField {startkey: 2, endkey: 4}, 'filterField', (err, res) ->
+          docs = res.instances
           test.equals docs.length, 3, 'filterByField value length test failed'
           async.each docs, ((doc, next) -> doc.refresh next), (err) ->
             test.equal err, null,

@@ -166,7 +166,10 @@ class Type
         else if res.rows?
           iterator = (id, next) => @instance true, id, next
           async.map (row.id for row in res.rows), iterator, (err, results) ->
-            cb err, results
+            cb err,
+              total: res.total_rows
+              offset: res.offset
+              instances: results
         else
           cb 'malformed view results', res
 
