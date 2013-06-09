@@ -76,21 +76,6 @@ class Instance
       cb "attempt to remove a document when it doesn't have a revision", null
 
 class Type
-  filterSource = (doc) ->
-    filterObject = {}
-    result = true
-
-    lastField = '_id'
-    for filterField, filterValue of filterObject
-      if (filterValue is null and doc[filterField] is undefined) or
-      (filterValue isnt null and doc[filterField] isnt filterValue)
-        result = false
-        break
-      lastField = filterField
-
-    if result
-      emit doc[lastField]
-
   constructor: (api, name) ->
     if not _.isString(name) or name.length < 1
       throw 'BenchDB::Type: atempt to create a type without a name'
@@ -130,6 +115,25 @@ class Type
 
   all: (cb) -> @filterByField cb
 
+  prepareView: ->
+
+  # filter view source which will have filterObject substituted with esprima
+  # before saving view source to the DB
+  filterSource = (doc) ->
+    filterObject = {}
+    result = true
+
+    lastField = '_id'
+    for filterField, filterValue of filterObject
+      if (filterValue is null and doc[filterField] is undefined) or
+      (filterValue isnt null and doc[filterField] isnt filterValue)
+        result = false
+        break
+      lastField = filterField
+
+    if result
+      emit doc[lastField]
+
   filterByField: ->
     { viewOpts, field, value, cb } =
       __
@@ -140,8 +144,8 @@ class Type
     filterObject = type: @name
     if field?
       filterObject[field] = null
-    # for some reason esprima doesn't parse stray function expressions
-    # so transforming filterSource to variable assignment...
+    # for some reason esprima doesn't parse any stray function expressions
+    # so we should transform filterSource to a variable assignment
     mapSource = (falafel ('var f = ' + filterSource + ''), (node) ->
       if lang('assign')(node) and node.left.name is 'filterObject'
         node.update "filterObject = #{ JSON.stringify filterObject }"
