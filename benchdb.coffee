@@ -116,6 +116,36 @@ class Type
   all: (cb) -> @filterByField cb
 
   prepareView: ->
+    { viewOpts, viewName, mapSource, reduceSource, cb } =
+      __
+        viewOpts: [Object, designDocument: '_benchdb_user_views']
+        viewName: String
+        mapSource: [String]
+        reduceSource: [String]
+        cb: Function
+
+    docId = "_design/#{ viewOpts.designDocument }"
+
+    @api.retrieve docId, (err, res) =>
+      if err?
+        cb err, res
+        return
+      if res.error is 'not_found'
+        res = _id: docId, language: 'javascript', views: {}
+        res.views[viewName] = {}
+      if not _.isObject(res.views[viewName]) or
+      res.views[viewName].map isnt mapSource or
+      res.views[viewName].reduce isnt reduceSource
+        res.views[viewName] =
+          map: mapSource
+          reduce: reduceSource
+        @api.modify res, (err, errRes) ->
+          if err?
+            cb err, errRes
+          else
+            cb null
+      else
+        cb null
 
   # filter view source which will have filterObject substituted with esprima
   # before saving view source to the DB
@@ -154,45 +184,30 @@ class Type
       node.declarations[0].id.name is 'f'
         node.update node.declarations[0].init.source()).toString()
 
-    docId = "_design/_benchdb"
     viewName = "#{@name}_#{if field then field else ''}"
 
-    getViewResults = =>
-      if value?
-        viewOpts.key = value
-      stringifiedFields = ['key', 'keys', 'startkey', 'endkey']
-      for field, value of viewOpts when field in stringifiedFields
-        viewOpts[field] = JSON.stringify value
-      query = url.format query: viewOpts
-      @api.retrieve "#{docId}/_view/#{viewName}#{query}", (err, res) =>
+    @prepareView {designDocument: '_benchdb'}, viewName, mapSource,
+      (err, res) =>
         if err?
           cb err, res
-        else if res.rows?
-          iterator = (id, next) => @instance true, id, next
-          async.map (row.id for row in res.rows), iterator, (err, results) ->
-            cb err,
-              total: res.total_rows
-              offset: res.offset
-              instances: results
-        else
-          cb 'malformed view results', res
-
-    @api.retrieve docId, (err, res) =>
-      if err?
-        cb err, res
-        return
-      if res.error is 'not_found'
-        res = _id: docId, language: 'javascript', views: {}
-        res.views[viewName] = {}
-      if not _.isObject(res.views[viewName]) or
-      res.views[viewName].map isnt mapSource or res.views[viewName].reduce?
-        res.views[viewName] = map: mapSource
-        @api.modify res, (err, errRes) ->
+          return
+        if value?
+          viewOpts.key = value
+        stringifiedFields = ['key', 'keys', 'startkey', 'endkey']
+        for field, value of viewOpts when field in stringifiedFields
+          viewOpts[field] = JSON.stringify value
+        query = url.format query: viewOpts
+        @api.retrieve "_design/_benchdb/_view/#{viewName}#{query}", (err, res) =>
           if err?
-            cb err, errRes
+            cb err, res
+          else if res.rows?
+            iterator = (id, next) => @instance true, id, next
+            async.map (row.id for row in res.rows), iterator, (err, results) ->
+              cb err,
+                total: res.total_rows
+                offset: res.offset
+                instances: results
           else
-            getViewResults()
-      else
-        getViewResults()
+            cb 'malformed view results', res
 
 module.exports = Type
