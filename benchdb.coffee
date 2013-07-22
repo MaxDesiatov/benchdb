@@ -22,7 +22,7 @@ class Instance
       apiCall instance.data, (error, res) ->
         if not error and res.error is 'conflict'
           isConflicted = true
-          intance.refresh whilstCb
+          instance.refresh whilstCb
         else
           isConflicted = false
           whilstCb error, res
@@ -147,22 +147,27 @@ class Type
       else
         cb null
 
-  # filter view source which will have filterObject substituted with esprima
+  # filter view source which will have filterObject substituted with falafel
   # before saving view source to the DB
   filterSource = (doc) ->
     filterObject = {}
+
+    if doc.type isnt filterObject.type
+      return
+
     result = true
 
-    lastField = '_id'
+    fields = []
     for filterField, filterValue of filterObject
       if (filterValue is null and doc[filterField] is undefined) or
       (filterValue isnt null and doc[filterField] isnt filterValue)
         result = false
         break
-      lastField = filterField
+      if filterField isnt 'type'
+        fields.push filterField
 
     if result
-      emit doc[lastField]
+      emit(doc[field] for field in fields)
 
   filterByField: ->
     { viewOpts, field, value, cb } =
@@ -171,9 +176,27 @@ class Type
         field: [String]
         value: [undefined, null]
         cb: Function
+
     filterObject = type: @name
     if field?
       filterObject[field] = null
+    if _.isArray viewOpts.sort
+      for f in viewOpts.sort
+        filterObject[f] = null
+      if value?
+        viewOpts.startkey =  JSON.stringify [value]
+        viewOpts.endkey = JSON.stringify [value, {}]
+        if viewOpts.descending is true
+          [viewOpts.startkey, viewOpts.endkey] =
+            [viewOpts.endkey, viewOpts.startkey]
+        delete viewOpts.key
+    else
+      viewOpts.sort = []
+      if value?
+        viewOpts.key = value
+    if _.isBoolean viewOpts.descending
+      viewOpts.descending = JSON.stringify viewOpts.descending
+
     # for some reason esprima doesn't parse any stray function expressions
     # so we should transform filterSource to a variable assignment
     mapSource = (falafel ('var f = ' + filterSource + ''), (node) ->
@@ -184,18 +207,23 @@ class Type
       node.declarations[0].id.name is 'f'
         node.update node.declarations[0].init.source()).toString()
 
-    viewName = "#{@name}_#{if field then field else ''}"
+    fieldName = if field then field else ''
+    viewName = "#{@name}_#{fieldName}_#{viewOpts.sort.join ''}"
 
     @prepareView {designDocument: '_benchdb'}, viewName, mapSource,
       (err, res) =>
         if err?
           cb err, res
           return
-        if value?
-          viewOpts.key = value
         stringifiedFields = ['key', 'keys', 'startkey', 'endkey']
         for field, value of viewOpts when field in stringifiedFields
-          viewOpts[field] = JSON.stringify value
+          if ((viewOpts.sort.length < 1) and (field isnt 'sort')) or
+          (viewOpts.sort.length > 0 and
+          # don't touch startkey/endkey if sorting is present, these fields
+          # were prepared in earlier steps
+          not (field in ['startkey', 'endkey']))
+            viewOpts[field] = JSON.stringify [value]
+        delete viewOpts.sort
         query = url.format query: viewOpts
         @api.retrieve "_design/_benchdb/_view/#{viewName}#{query}", (err, res) =>
           if err?

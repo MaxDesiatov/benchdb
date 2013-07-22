@@ -281,3 +281,26 @@ module.exports = (config) ->
             test.deepEqual filterFieldValues, [2, 3, 4],
               'filterByField values equality test failed'
             test.done()
+
+    testTypeFilterByFieldSort: (test) ->
+      t = new Type @testDb, testtype
+      iterator = (n, next) -> t.instance false, (dummy, res) ->
+        res.data.filterField = n
+        res.data.filterAnotherField = n % 2
+        res.save (err) -> next err, res.id
+      async.times 5, iterator, ->
+        t.filterByField {
+          sort: ['filterField']
+          descending: true
+        }, 'filterAnotherField', 0, (err, res) ->
+          docs = res.instances
+          test.equals docs.length, 3, 'filterByField value length test failed'
+          async.each docs, ((doc, next) -> doc.refresh next), (err) ->
+            test.equal err, null,
+              'filterByField values error absence test failed'
+            filterFieldValues =
+              _.chain(docs).pluck('data').pluck('filterField').value()
+            test.deepEqual filterFieldValues, [4, 2, 0],
+              'filterByField values equality test failed'
+            test.done()
+
