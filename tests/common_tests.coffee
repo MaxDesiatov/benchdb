@@ -250,11 +250,12 @@ module.exports = (config) ->
         t.filterByField 'filterField', 3, (err, res) ->
           docs = res.instances
           test.equals docs.length, 1, 'filterByField value length test failed'
-          if docs.length
-            docs[0].refresh (err, res) ->
+          if docs.length? and docs.length > 0
+            doc = docs[0]
+            doc.refresh (err, res) ->
               test.equals err, null,
                 'filterByField value error absence test failed'
-              test.equals res.filterField, 3,
+              test.equals doc.data.filterField, 3,
                 'filterByField value equality test failed'
               t.filterByField 'filterAnotherField', 0, (err, res) ->
                 docs = res.instances
@@ -272,7 +273,7 @@ module.exports = (config) ->
       async.times 5, iterator, ->
         t.filterByField {startkey: 2, endkey: 4}, 'filterField', (err, res) ->
           docs = res.instances
-          test.equals docs.length, 3, 'filterByField value length test failed'
+          test.equals docs.length, 3, 'filterByField opts length test failed'
           async.each docs, ((doc, next) -> doc.refresh next), (err) ->
             test.equal err, null,
               'filterByField values error absence test failed'
@@ -294,13 +295,32 @@ module.exports = (config) ->
           descending: true
         }, 'filterAnotherField', 0, (err, res) ->
           docs = res.instances
-          test.equals docs.length, 3, 'filterByField value length test failed'
+          test.equals docs.length, 3, 'filterByField sort length test failed'
           async.each docs, ((doc, next) -> doc.refresh next), (err) ->
             test.equal err, null,
               'filterByField values error absence test failed'
             filterFieldValues =
               _.chain(docs).pluck('data').pluck('filterField').value()
             test.deepEqual filterFieldValues, [4, 2, 0],
-              'filterByField values equality test failed'
+              'filterByField with sort values equality test failed'
             test.done()
 
+    testTypeFilterByFields: (test) ->
+      t = new Type @testDb, testtype
+      iterator = (n, next) -> t.instance false, (dummy, res) ->
+        res.data.filterField = n
+        res.data.filterThree = n % 3
+        res.data.filterFour = n % 4
+        res.save (err) -> next err, res.id
+      async.times 50, iterator, ->
+        t.filterByFields {
+          sort: ['filterField'],
+          include_docs: true
+        }, {filterThree: 0, filterFour: 0}, (err, res) ->
+          docs = res.instances
+          test.equals docs.length, 5, 'filterByFields values length test failed'
+          filterFieldValues =
+            _.chain(docs).pluck('data').pluck('filterField').value()
+          test.deepEqual filterFieldValues, [0, 12, 24, 36, 48],
+            'filterByFields values equality test failed'
+          test.done()

@@ -38,7 +38,7 @@ module.exports = (karma) ->
     autoWatch: false
 
     # browser-request seems to be broken in firefox
-    browsers: ['Safari']
+    browsers: ['Chrome']
 
     proxies:  {
         '/couch': 'http://' + proxiesConfig.host + ':' + proxiesConfig.port

@@ -20,13 +20,13 @@
     "odm"
   ],
   "dependencies": {
-    "underscore": "1.4.x",
+    "underscore": "1.5.x",
     "async": "0.2.x",
-    "request": "2.16.x",
+    "request": "2.23.x",
     "browser-request": "https://github.com/explicitcall/browser-request/tarball/master",
     "weak": "~0.2.2",
     "cssauron-falafel": "0.0.x",
-    "falafel": "~0.2.1",
+    "falafel": "~0.3.1",
     "arguejs": "~0.1.3"
   },
   "analyze": false,
@@ -40,7 +40,7 @@
     "stream-equal": "0.1.x",
     "temporary": "0.0.x",
     "karma-nodeunit": "0.0.x",
-    "grunt-contrib-nodeunit": "~0.1.2",
+    "grunt-contrib-nodeunit": "~0.2.0",
     "grunt-contrib-coffee": "~0.7.0",
     "matchdep": "~0.1.2",
     "grunt-contrib-clean": "~0.4.1",
@@ -55,7 +55,8 @@
     "karma-phantomjs-launcher": "0.0.2",
     "karma": "~0.9.3",
     "karma-safari-launcher": "~0.0.2",
-    "grunt-contrib-copy": "~0.4.1"
+    "grunt-contrib-copy": "~0.4.1",
+    "graceful-fs": "~2.0.0"
   },
   "browser": {
     "request": "./node_modules/browser-request/dist/ender/request.js",

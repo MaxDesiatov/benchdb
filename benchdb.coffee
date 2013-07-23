@@ -177,7 +177,6 @@ class Type
         cb: Function
 
     filterObject = type: @name
-    console.log "filter is #{JSON.stringify filter}"
     for k, v of filter
       filterObject[k] = null
     values = _.values(filter)
@@ -195,14 +194,12 @@ class Type
         delete viewOpts.key
       else
         for f in ['startkey', 'endkey']
-          if not _.isArray viewOpts[f]
+          if viewOpts[f]? and not _.isArray viewOpts[f]
             viewOpts[f] = [viewOpts[f]]
     else
       viewOpts.sort = []
       if values.length > 0
         viewOpts.key = values
-    if _.isBoolean viewOpts.descending
-      viewOpts.descending = JSON.stringify viewOpts.descending
 
     # for some reason esprima doesn't parse any stray function expressions
     # so we should transform filterSource to a variable assignment
@@ -214,8 +211,6 @@ class Type
       node.declarations[0].id.name is 'f'
         node.update node.declarations[0].init.source()).toString()
 
-    console.log "mapSource is #{mapSource}"
-
     viewName = "#{@name}_#{fields.join ''}_#{viewOpts.sort.join ''}"
 
     @prepareView { designDocument: '_benchdb' }, viewName, mapSource,
@@ -224,19 +219,21 @@ class Type
           cb err, res
           return
         stringifiedFields = ['key', 'keys', 'startkey', 'endkey']
-        for k, v of viewOpts when k in stringifiedFields
-          viewOpts[k] = JSON.stringify v
+        for k, v of viewOpts
+          if (k in stringifiedFields) or _.isBoolean v
+            viewOpts[k] = JSON.stringify v
         delete viewOpts.sort
-        console.log "viewOpts is #{JSON.stringify viewOpts}"
         query = url.format query: viewOpts
-        console.log "query is #{query}"
         @api.retrieve "_design/_benchdb/_view/#{viewName}#{query}", (err, res) =>
-          console.log "res is #{JSON.stringify res}"
           if err?
             cb err, res
           else if res.rows?
-            iterator = (id, next) => @instance true, id, next
-            async.map (row.id for row in res.rows), iterator, (err, results) ->
+            iterator = (row, next) =>
+              @instance true, row.id, (err, nstnc) ->
+                if viewOpts.include_docs? and viewOpts.include_docs is 'true'
+                  _(nstnc.data).extend row.doc
+                next err, nstnc
+            async.map (row for row in res.rows), iterator, (err, results) ->
               cb err,
                 total: res.total_rows
                 offset: res.offset
@@ -252,17 +249,16 @@ class Type
         value: [undefined]
         cb: Function
 
-    console.log "field is #{field} and value is #{value}"
-    fields = {}
+    filter = {}
     if _.isString(field) and field.length > 0
       if value?
-        fields[field] = value
+        filter[field] = value
       else
         if _.isArray viewOpts.sort
           viewOpts.sort.push field
         else
           viewOpts.sort = [field]
-    console.log "fields is #{JSON.stringify fields}"
-    @filterByFields viewOpts, fields, cb
+
+    @filterByFields viewOpts, filter, cb
 
 module.exports = Type
