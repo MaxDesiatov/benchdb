@@ -169,31 +169,38 @@ class Type
     if result
       emit(doc[field] for field in fields)
 
-  filterByField: ->
-    { viewOpts, field, value, cb } =
+  filterByFields: ->
+    { viewOpts, filter, cb } =
       __
         viewOpts: [Object, {}]
-        field: [String]
-        value: [undefined, null]
+        filter: [Object, {}]
         cb: Function
 
     filterObject = type: @name
-    if field?
-      filterObject[field] = null
+    console.log "filter is #{JSON.stringify filter}"
+    for k, v of filter
+      filterObject[k] = null
+    values = _.values(filter)
+    fields = _.keys(filter)
+
     if _.isArray viewOpts.sort
       for f in viewOpts.sort
         filterObject[f] = null
-      if value?
-        viewOpts.startkey =  JSON.stringify [value]
-        viewOpts.endkey = JSON.stringify [value, {}]
+      if values.length > 0
+        viewOpts.startkey = values
+        viewOpts.endkey = values.concat [{}]
         if viewOpts.descending is true
           [viewOpts.startkey, viewOpts.endkey] =
             [viewOpts.endkey, viewOpts.startkey]
         delete viewOpts.key
+      else
+        for f in ['startkey', 'endkey']
+          if not _.isArray viewOpts[f]
+            viewOpts[f] = [viewOpts[f]]
     else
       viewOpts.sort = []
-      if value?
-        viewOpts.key = value
+      if values.length > 0
+        viewOpts.key = values
     if _.isBoolean viewOpts.descending
       viewOpts.descending = JSON.stringify viewOpts.descending
 
@@ -207,25 +214,24 @@ class Type
       node.declarations[0].id.name is 'f'
         node.update node.declarations[0].init.source()).toString()
 
-    fieldName = if field then field else ''
-    viewName = "#{@name}_#{fieldName}_#{viewOpts.sort.join ''}"
+    console.log "mapSource is #{mapSource}"
 
-    @prepareView {designDocument: '_benchdb'}, viewName, mapSource,
+    viewName = "#{@name}_#{fields.join ''}_#{viewOpts.sort.join ''}"
+
+    @prepareView { designDocument: '_benchdb' }, viewName, mapSource,
       (err, res) =>
         if err?
           cb err, res
           return
         stringifiedFields = ['key', 'keys', 'startkey', 'endkey']
-        for field, value of viewOpts when field in stringifiedFields
-          if ((viewOpts.sort.length < 1) and (field isnt 'sort')) or
-          (viewOpts.sort.length > 0 and
-          # don't touch startkey/endkey if sorting is present, these fields
-          # were prepared in earlier steps
-          not (field in ['startkey', 'endkey']))
-            viewOpts[field] = JSON.stringify [value]
+        for k, v of viewOpts when k in stringifiedFields
+          viewOpts[k] = JSON.stringify v
         delete viewOpts.sort
+        console.log "viewOpts is #{JSON.stringify viewOpts}"
         query = url.format query: viewOpts
+        console.log "query is #{query}"
         @api.retrieve "_design/_benchdb/_view/#{viewName}#{query}", (err, res) =>
+          console.log "res is #{JSON.stringify res}"
           if err?
             cb err, res
           else if res.rows?
@@ -237,5 +243,26 @@ class Type
                 instances: results
           else
             cb 'malformed view results', res
+
+  filterByField: ->
+    { viewOpts, field, value, cb } =
+      __
+        viewOpts: [Object, {}]
+        field: [String]
+        value: [undefined]
+        cb: Function
+
+    console.log "field is #{field} and value is #{value}"
+    fields = {}
+    if _.isString(field) and field.length > 0
+      if value?
+        fields[field] = value
+      else
+        if _.isArray viewOpts.sort
+          viewOpts.sort.push field
+        else
+          viewOpts.sort = [field]
+    console.log "fields is #{JSON.stringify fields}"
+    @filterByFields viewOpts, fields, cb
 
 module.exports = Type
